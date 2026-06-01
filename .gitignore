@@ -1,4 +1,17 @@
 # ========================
+# INTERNAL DOCS / NOTES
+# ========================
+PROJECT_ABSTRACT_THEORY.txt
+STUDIX_DETAILED_TELUGU.txt
+STUDIX_EXPLANATION_TELUGU.txt
+STUDIX_FINAL_DOCUMENTATION.txt
+STUDIX_FULL_THEORY.txt
+STUDIX_TECH_STACK_MAPPING.txt
+firebase-rules.md
+predefined-UI-components.txt
+techstackUsed.txt
+
+# ========================
 # SENSITIVE / SECRET FILES
 # ========================
 # Environment variables (API keys, DB passwords, etc.)
