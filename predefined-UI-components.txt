@@ -1,0 +1,17 @@
+Important React Component UI library components to use i my Mini Project :
+
+1) https://animate-ui.com/docs/components/radix/tabs
+
+2)https://animate-ui.com/docs/components/community/playful-todolist
+
+3)https://animate-ui.com/docs/components/community/radial-menu
+
+4)https://animate-ui.com/docs/primitives/effects/image-zoom
+
+5)https://animate-ui.com/docs/components/community/user-presence-avatar
+
+6)https://animate-ui.com/docs/components/community/pin-list
+
+7)https://animate-ui.com/docs/components/community/notification-list
+
+8)

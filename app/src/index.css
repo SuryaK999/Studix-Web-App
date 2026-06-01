@@ -1,0 +1,550 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design System: Studix SaaS ────────────────────────────────────────────
+   Palette:
+     Primary dark  : #17181f
+     Secondary dark: #2b2d38
+     Accent purple : #7e56f0
+     Surface light : #fbf9ff
+   Font: Archivo (400 / 500 / 600 / 700)
+────────────────────────────────────────────────────────────────────────────── */
+
+@layer base {
+  :root {
+    /* Light theme — kept for completeness, app defaults to dark */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 8%;
+    --card: 0 0% 98%;
+    --card-foreground: 240 10% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 8%;
+    --primary: 255 82% 64%; /* #7e56f0 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 94%;
+    --secondary-foreground: 240 10% 8%;
+    --muted: 240 5% 94%;
+    --muted-foreground: 240 4% 48%;
+    --accent: 255 82% 64%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 255 82% 64%;
+    --radius: 0.625rem; /* 10px — tighter than before */
+    --sidebar-background: 240 5% 97%;
+    --sidebar-foreground: 240 6% 30%;
+    --sidebar-border: 240 6% 90%;
+    --sidebar-primary: 255 82% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 5% 94%;
+    --sidebar-accent-foreground: 240 10% 8%;
+    --sidebar-ring: 255 82% 64%;
+  }
+
+  .dark {
+    /* ── #17181f base, #2b2d38 surface, #7e56f0 accent ── */
+    --background: 231 10% 11%; /* #17181f */
+    --foreground: 240 10% 96%; /* near-white */
+    --card: 228 9% 16%; /* #23242d — slightly lighter than bg */
+    --card-foreground: 240 10% 96%;
+    --popover: 230 11% 14%;
+    --popover-foreground: 240 10% 96%;
+    --primary: 255 82% 64%; /* #7e56f0 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 228 9% 19%; /* #2b2d38 */
+    --secondary-foreground: 240 8% 85%;
+    --muted: 228 9% 19%;
+    --muted-foreground: 240 5% 55%;
+    --accent: 228 9% 22%;
+    --accent-foreground: 240 10% 96%;
+    --destructive: 0 78% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 228 9% 22%; /* subtle separator */
+    --input: 228 9% 22%;
+    --ring: 255 82% 64%;
+    --radius: 0.625rem;
+    --sidebar-background: 231 10% 11%;
+    --sidebar-foreground: 240 5% 60%;
+    --sidebar-border: 228 9% 22%;
+    --sidebar-primary: 255 82% 64%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 228 9% 19%;
+    --sidebar-accent-foreground: 240 10% 96%;
+    --sidebar-ring: 255 82% 64%;
+  }
+
+  .amoled {
+    --background: 0 0% 0%; /* Pure Black */
+    --card: 240 10% 4%;
+    --popover: 240 10% 4%;
+    --secondary: 240 10% 6%;
+    --muted: 240 10% 6%;
+    --accent: 240 10% 8%;
+    --border: 240 10% 10%;
+    --input: 240 10% 10%;
+    --sidebar-background: 0 0% 0%;
+  }
+
+  .brand {
+    /* ── #0f0a29 base, #1e144a surface, #8b5cf6 accent ── */
+    --background: 250 61% 10%;
+    --foreground: 210 40% 98%;
+    --card: 260 50% 18%;
+    --card-foreground: 210 40% 98%;
+    --popover: 250 61% 10%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 262 83% 58%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 250 40% 20%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 250 40% 20%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 262 83% 58%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 260 40% 25%;
+    --input: 260 40% 20%;
+    --ring: 262 83% 58%;
+    --radius: 0.625rem;
+    --sidebar-background: 252 61% 10%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 260 40% 25%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 250 40% 20%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-ring: 262 83% 58%;
+  }
+
+  .theme {
+    --animate-shimmer-slide: shimmer-slide var(--speed) ease-in-out infinite
+      alternate;
+    --animate-spin-around: spin-around calc(var(--speed) * 2) infinite linear;
+    --animate-shine: shine var(--duration) infinite linear;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    @apply h-full m-0 p-0;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family:
+      "Archivo",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h6 {
+    font-family: "Archivo", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+}
+
+/* ─── Custom scrollbar (Invisible Professional) ──────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 160, 0.25) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 160, 0.25);
+  border-radius: 999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(120, 120, 160, 0.45);
+}
+html {
+  scroll-behavior: auto;
+}
+
+/* ─── Focus styles ───────────────────────────────────────────────────────── */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #7e56f0;
+  outline-offset: 2px;
+}
+
+/* ─── Skeleton loader ────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #1e1f28 25%, #2b2d38 50%, #1e1f28 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+}
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* ─── Utility classes ────────────────────────────────────────────────────── */
+.glass-surface {
+  background: rgba(35, 36, 45, 0.7);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.panel-surface {
+  background: rgba(23, 24, 31, 0.92);
+  border-right: 1px solid rgba(255, 255, 255, 0.055);
+}
+
+.accent-glow {
+  box-shadow:
+    0 0 0 1px rgba(126, 86, 240, 0.4),
+    0 4px 24px rgba(126, 86, 240, 0.15);
+}
+
+/* Global transition — only color/opacity/shadow (never transform — keep GPU-safe) */
+* {
+  transition-property:
+    color, background-color, border-color, opacity, box-shadow;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+/* ─── TipTap Editor ──────────────────────────────────────────────────────── */
+.ProseMirror {
+  outline: none;
+  min-height: 200px;
+  font-family: "Archivo", sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #ffffff !important;
+}
+.ProseMirror p {
+  margin-bottom: 0.75em;
+  color: #ffffff !important;
+}
+.ProseMirror h1 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-bottom: 0.5em;
+  color: #ffffff !important;
+}
+.ProseMirror h2 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-bottom: 0.5em;
+  color: #ffffff !important;
+}
+.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5em;
+  margin-bottom: 0.75em;
+}
+.ProseMirror blockquote {
+  border-left: 3px solid #7e56f0;
+  padding-left: 1em;
+  margin-left: 0;
+  margin-bottom: 0.75em;
+  color: hsl(var(--muted-foreground));
+  font-style: italic;
+}
+.ProseMirror code {
+  background: rgba(126, 86, 240, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 4px;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  font-size: 0.88em;
+}
+.ProseMirror pre {
+  background: #1a1b23;
+  color: #e5e7f0;
+  padding: 1em;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin-bottom: 0.75em;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@theme inline {
+  @keyframes shimmer-slide {
+    to {
+      transform: translate(calc(100cqw - 100%), 0);
+    }
+  }
+  @keyframes spin-around {
+    0% {
+      transform: translateZ(0) rotate(0);
+    }
+    15%,
+    35% {
+      transform: translateZ(0) rotate(90deg);
+    }
+    65%,
+    85% {
+      transform: translateZ(0) rotate(270deg);
+    }
+    100% {
+      transform: translateZ(0) rotate(360deg);
+    }
+  }
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
+    }
+  }
+}
+
+/* ─── Studix Chat Input Bar ─────────────────────────────────────────────── */
+.studix-input-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+
+  padding: 14px 18px;
+  background: transparent;
+}
+
+.studix-input-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.studix-input {
+  width: 100%;
+  min-height: 48px;
+  height: 48px;
+  max-height: 160px;
+
+  padding: 13px 18px;
+  border-radius: 24px;
+
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+
+  color: #e6e9f2;
+  font-size: 14.5px;
+  line-height: 20px;
+
+  outline: none;
+  transition: all 160ms ease;
+  resize: none;
+}
+
+.studix-input::placeholder {
+  color: rgba(200, 205, 230, 0.45);
+}
+
+.studix-input:focus {
+  border-color: rgba(139, 92, 246, 0.55);
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.12);
+}
+
+.studix-icon-btn {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: #8e9297;
+
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.studix-icon-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.studix-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.studix-attach-btn {
+  margin-right: 2px;
+  margin-bottom: 3px;
+}
+
+.studix-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.studix-send-btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: none;
+
+  background: linear-gradient(135deg, #7c5cff, #6d4aff);
+
+  color: white;
+  cursor: pointer;
+
+  transition: all 160ms ease;
+}
+
+.studix-send-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(124, 92, 255, 0.35);
+}
+
+.studix-send-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.studix-send-btn:disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .studix-input-bar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .studix-input {
+    min-height: 44px;
+    height: 44px;
+    padding: 11px 16px;
+    font-size: 14px;
+  }
+
+  .studix-icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+
+  .studix-send-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media print {
+  /* Override dark theme globally during print */
+  html.print-mode,
+  body.print-mode {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+
+  /* Hide everything except print root */
+  body.print-mode > *:not(#notes-print-root) {
+    display: none !important;
+  }
+
+  #notes-print-root {
+    display: block !important;
+    width: 210mm;
+    padding: 20mm;
+    background: #ffffff;
+    color: #111111;
+    font-family: Inter, system-ui, sans-serif;
+    line-height: 1.6;
+    margin: 0 auto;
+  }
+
+  #notes-print-root h1,
+  #notes-print-root h2,
+  #notes-print-root h3 {
+    page-break-after: avoid;
+    break-after: avoid;
+    font-weight: 600;
+  }
+
+  #notes-print-root p {
+    margin: 0 0 10px;
+    orphans: 2;
+    widows: 2;
+  }
+
+  #notes-print-root li {
+    orphans: 2;
+    widows: 2;
+  }
+
+  #notes-print-root .page-break {
+    break-before: page;
+  }
+
+  #notes-print-root ul,
+  #notes-print-root ol {
+    padding-left: 20px;
+  }
+
+  #notes-print-root pre,
+  #notes-print-root code {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    white-space: pre-wrap;
+  }
+
+  #notes-print-root img {
+    max-width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

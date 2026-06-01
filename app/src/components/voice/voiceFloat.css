@@ -1,0 +1,87 @@
+.voice-float {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  z-index: 9999;
+  pointer-events: auto;
+}
+
+.voice-card {
+  backdrop-filter: blur(12px);
+  background: rgba(20,20,28,0.7);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 16px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateZ(0);
+}
+
+.voice-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.voice-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.voice-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.voice-status {
+  font-size: 11px;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.voice-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+.voice-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: 8px;
+}
+
+.voice-btn {
+  border: none;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  transition: all 0.2s;
+}
+
+.voice-btn.mute {
+  background: rgba(255,255,255,0.1);
+}
+
+.voice-btn.mute:hover {
+  background: rgba(255,255,255,0.2);
+}
+
+.voice-btn.leave {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.voice-btn.leave:hover {
+  background: rgba(239, 68, 68, 0.4);
+}

@@ -1,0 +1,51 @@
+# ========================
+# SENSITIVE / SECRET FILES
+# ========================
+# Environment variables (API keys, DB passwords, etc.)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Firebase service account key (NEVER upload this!)
+serviceAccountKey.json
+
+# ========================
+# DEPENDENCIES
+# ========================
+node_modules/
+
+# ========================
+# BUILD OUTPUT
+# ========================
+dist/
+build/
+.vite/
+
+# ========================
+# OS & EDITOR FILES
+# ========================
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
+*.swo
+*~
+
+# ========================
+# LOGS
+# ========================
+*.log
+npm-debug.log*
+
+# ========================
+# USER UPLOADS (if any)
+# ========================
+app/server/uploads/
+
+# ========================
+# MISC
+# ========================
+*.pid
+*.seed
+.cache/
