@@ -79,6 +79,7 @@ function initSockets(io) {
     socket.on('disconnect', (reason) => {
       console.log(`[-] ${user.displayName} (${socket.id}) disconnected: ${reason}`);
 
+      const info = socketMap.get(socket.id);
       if (info) {
         const { roomId, userId } = info;
 

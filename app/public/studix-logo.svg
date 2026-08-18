@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" width="100%" height="100%">
+  <defs>
+    <!-- Premium App Gradients -->
+    <linearGradient id="coverLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#3730A3" />
+    </linearGradient>
+
+    <linearGradient id="coverRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#4338CA" />
+    </linearGradient>
+
+    <!-- Page Gradients (Tactile, Soft, Premium) -->
+    <linearGradient id="pageLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="85%" stop-color="#E2E8F0" />
+      <stop offset="100%" stop-color="#CBD5E1" />
+    </linearGradient>
+
+    <linearGradient id="pageRightGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F8FAFC" />
+      <stop offset="70%" stop-color="#E2E8F0" />
+      <stop offset="100%" stop-color="#94A3B8" />
+    </linearGradient>
+
+    <!-- Stylus / Pen Gradient -->
+    <linearGradient id="penBodyGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="40%" stop-color="#6366F1" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+
+    <linearGradient id="penTipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06B6D4" />
+      <stop offset="100%" stop-color="#0EA5E9" />
+    </linearGradient>
+
+    <!-- Drop Shadows for Realism -->
+    <filter id="pageShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#0F172A" flood-opacity="0.35" />
+    </filter>
+
+    <filter id="penShadow" x="-20%" y="-20%" width="150%" height="150%">
+      <feDropShadow dx="-4" dy="10" stdDeviation="10" flood-color="#0F172A" flood-opacity="0.30" />
+    </filter>
+  </defs>
+
+  <!-- ======================================================== -->
+  <!-- REALISTIC MINIMALIST OPEN BOOK + STYLUS LOGO             -->
+  <!-- ======================================================== -->
+  <g filter="url(#pageShadow)">
+    <!-- Hardcover Base Backplate (Left & Right) -->
+    <path 
+      d="M 256 395 
+         C 200 375, 120 370, 72 388 
+         C 62 392, 52 384, 52 372 
+         L 52 175 
+         C 52 165, 60 157, 70 154 
+         C 120 138, 200 144, 256 168 
+         Z" 
+      fill="url(#coverLeftGrad)" 
+    />
+    <path 
+      d="M 256 395 
+         C 312 375, 392 370, 440 388 
+         C 450 392, 460 384, 460 372 
+         L 460 175 
+         C 460 165, 452 157, 442 154 
+         C 392 138, 312 144, 256 168 
+         Z" 
+      fill="url(#coverRightGrad)" 
+    />
+
+    <!-- Middle Spine Crease -->
+    <path d="M 256 165 L 256 398" stroke="#1E1B4B" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Left Open Curved Pages Block (Depth effect) -->
+    <path 
+      d="M 254 382 
+         C 205 362, 130 358, 82 374 
+         C 74 377, 66 371, 66 362 
+         L 66 182 
+         C 66 174, 73 167, 81 165 
+         C 130 149, 205 155, 254 176 
+         Z" 
+      fill="url(#pageLeftGrad)" 
+    />
+
+    <!-- Right Open Curved Pages Block (Depth effect) -->
+    <path 
+      d="M 258 382 
+         C 307 362, 382 358, 430 374 
+         C 438 377, 446 371, 446 362 
+         L 446 182 
+         C 446 174, 439 167, 431 165 
+         C 382 149, 307 155, 258 176 
+         Z" 
+      fill="url(#pageRightGrad)" 
+    />
+
+    <!-- Subtle Page Guidelines / Text Hints -->
+    <g opacity="0.25" stroke="#475569" stroke-width="3" stroke-linecap="round">
+      <!-- Left Page lines -->
+      <line x1="105" y1="210" x2="225" y2="218" />
+      <line x1="105" y1="245" x2="225" y2="253" />
+      <line x1="105" y1="280" x2="200" y2="288" />
+      <line x1="105" y1="315" x2="185" y2="322" />
+
+      <!-- Right Page lines -->
+      <line x1="287" y1="218" x2="407" y2="210" />
+      <line x1="287" y1="253" x2="407" y2="245" />
+      <line x1="287" y1="288" x2="385" y2="280" />
+      <line x1="287" y1="322" x2="365" y2="315" />
+    </g>
+
+    <!-- Center Fold Spine Shadow -->
+    <path 
+      d="M 252 176 C 255 250, 255 320, 252 382 C 258 382, 260 382, 260 382 C 257 320, 257 250, 260 176 Z" 
+      fill="#64748B" 
+      opacity="0.4" 
+    />
+  </g>
+
+  <!-- ======================================================== -->
+  <!-- ELEGANT 45° RESTING STYLUS / PEN                         -->
+  <!-- ======================================================== -->
+  <g filter="url(#penShadow)" transform="rotate(-38, 256, 256)">
+    <!-- Pen Body Barrel -->
+    <rect x="246" y="80" width="20" height="230" rx="10" fill="url(#penBodyGrad)" />
+
+    <!-- Pen Grip & Accent Rings -->
+    <rect x="246" y="270" width="20" height="15" fill="#E2E8F0" opacity="0.9" />
+    <rect x="246" y="290" width="20" height="8" fill="#38BDF8" />
+
+    <!-- Sleek Precision Pen Nib / Tip Cone -->
+    <path 
+      d="M 246 310 
+         L 266 310 
+         L 256 348 
+         Z" 
+      fill="url(#penTipGrad)" 
+    />
+
+    <!-- Nib Writing Point Bead -->
+    <circle cx="256" cy="349" r="2.5" fill="#0284C7" />
+
+    <!-- Top Stylus Cap / Eraser Dome -->
+    <path 
+      d="M 246 92 
+         C 246 84, 250 78, 256 78 
+         C 262 78, 266 84, 266 92 
+         Z" 
+      fill="#F8FAFC" 
+    />
+  </g>
+</svg>

@@ -10,6 +10,7 @@ import {
   Edit2, SmilePlus, PhoneCall, Settings, Search, FilePlus, ChevronDown, CheckCheck,
   Bold, Italic, List, Table, Image, HelpCircle, Bot, Zap, LogIn, Reply, RefreshCw
 } from 'lucide-react';
+import { StudixLogo } from '@/components/StudixLogo';
 import { Toaster, toast } from 'sonner';
 import { GlobalThemeProvider } from '@/hooks/useGlobalTheme';
 import { RadialMenu } from '@/components/ui/RadialMenu';
@@ -164,10 +165,8 @@ function AppContent() {
             </div>
             
             <motion.div layout className="relative z-10 flex flex-col justify-between h-full">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center border border-white/20 premium-shadow">
-                  <BookOpen className="h-6 w-6 text-white" />
-                </div>
+              <div className="flex items-center gap-3.5">
+                <StudixLogo size={42} idPrefix="auth-left-logo" />
                 <span className="text-2xl font-bold tracking-tight text-white">Studix</span>
               </div>
             
@@ -181,10 +180,13 @@ function AppContent() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4 }}
                     >
-                      <h1 className="text-5xl font-bold text-white tracking-tight mb-6 leading-tight">
-                        Empower your<br/><span className="bg-gradient-to-r from-brand-glow to-teal-400 text-transparent bg-clip-text">collaborative learning.</span>
+                      <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5 leading-[1.15]">
+                        Empower your<br/>
+                        <span className="bg-gradient-to-r from-indigo-400 via-purple-300 to-cyan-400 text-transparent bg-clip-text">
+                          collaborative learning.
+                        </span>
                       </h1>
-                      <p className="text-lg text-gray-300 leading-relaxed max-w-lg">
+                      <p className="text-base sm:text-lg text-gray-300/90 leading-relaxed max-w-lg font-normal">
                         Join the real-time collaborative study platform designed for the modern team. Chat, share notes, and manage tasks seamlessly in one beautiful premium workspace.
                       </p>
                     </motion.div>
@@ -196,10 +198,13 @@ function AppContent() {
                       exit={{ opacity: 0, y: -20 }}
                       transition={{ duration: 0.4 }}
                     >
-                      <h1 className="text-5xl font-bold text-white tracking-tight mb-6 leading-tight">
-                        Spark your<br/><span className="bg-gradient-to-r from-blue-400 to-indigo-400 text-transparent bg-clip-text">creative potential.</span>
+                      <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight mb-5 leading-[1.15]">
+                        Spark your<br/>
+                        <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-teal-300 text-transparent bg-clip-text">
+                          creative potential.
+                        </span>
                       </h1>
-                      <p className="text-lg text-gray-300 leading-relaxed max-w-lg">
+                      <p className="text-base sm:text-lg text-gray-300/90 leading-relaxed max-w-lg font-normal">
                         Create an account to unlock lightning-fast study sessions, high-performance tools, and secure cloud syncing.
                       </p>
                     </motion.div>
@@ -209,22 +214,22 @@ function AppContent() {
             </motion.div>
           </motion.div>
 
-          {}
+          {/* Right Section / Auth Form */}
           <motion.div 
             layout
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
             className="w-full lg:w-1/2 p-8 sm:p-12 lg:p-24 relative z-10 bg-transparent flex flex-col flex-shrink-0 overflow-y-auto"
           >
-            {}
+            {/* Ambient Background Gradient for Mobile */}
             <div className="absolute inset-0 lg:hidden overflow-hidden pointer-events-none -z-10 bg-brand-gradient">
               <div className="absolute top-[10%] left-[20%] w-[40%] h-[40%] rounded-full bg-indigo-500/15 blur-[120px]" />
               <div className="absolute bottom-[10%] right-[20%] w-[50%] h-[30%] rounded-full bg-purple-500/15 blur-[120px]" />
             </div>
 
             <div className="w-full max-w-[480px] m-auto z-10 flex flex-col justify-center min-h-[500px]">
-              <div className="text-center mb-8 lg:hidden">
-                <div className="w-16 h-16 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-500/25">
-                  <BookOpen className="h-8 w-8 text-primary-foreground" />
+              <div className="text-center mb-8 lg:hidden flex flex-col items-center">
+                <div className="mb-4 flex items-center justify-center">
+                  <StudixLogo size={52} idPrefix="auth-mob-logo" />
                 </div>
                 <h1 className="text-3xl font-bold text-foreground tracking-tight">
                   Studix
@@ -291,22 +296,23 @@ function LoadingScreen() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="relative flex flex-col items-center max-w-sm w-full mx-auto"
         >
-          {}
+          {/* Logo with gentle pulse and drop-shadow, no bounding box */}
           <motion.div
             animate={{ 
-              boxShadow: [
-                "0 0 0 0 rgba(99, 102, 241, 0)",
-                "0 0 40px 15px rgba(99, 102, 241, 0.2)",
-                "0 0 0 0 rgba(99, 102, 241, 0)"
+              scale: [1, 1.06, 1],
+              filter: [
+                "drop-shadow(0 0 15px rgba(99, 102, 241, 0.25))",
+                "drop-shadow(0 0 35px rgba(99, 102, 241, 0.6))",
+                "drop-shadow(0 0 15px rgba(99, 102, 241, 0.25))"
               ]
             }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl flex items-center justify-center border border-white/20 mb-8 z-10 relative"
+            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+            className="mb-8 z-10 relative flex items-center justify-center"
           >
-            <BookOpen className="h-10 w-10 text-white" />
+            <StudixLogo size={80} idPrefix="loading-screen-logo" />
           </motion.div>
 
-          {}
+          {/* App Title */}
           <div className="text-center">
             <motion.h1 
               className="text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-200 to-white relative inline-block mb-4"
@@ -317,7 +323,7 @@ function LoadingScreen() {
               Studix
             </motion.h1>
             
-            {}
+            {/* Loading Indicator */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}

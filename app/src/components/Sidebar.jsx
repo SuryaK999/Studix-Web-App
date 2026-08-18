@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
 import { Home, Clock, Grid, Folder, Flame, BookOpen, Plus, Compass, ChevronDown, Settings, Hash } from 'lucide-react';
+import { StudixLogo } from './StudixLogo';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import { fetchUserRooms } from '@/services/api';
@@ -61,18 +62,18 @@ export function Sidebar({ onSelectRoom }) {
     <div className="w-full h-full bg-sidebar flex flex-col pt-6 pb-4 relative overflow-hidden transition-colors duration-300">
       <div className="absolute top-0 left-0 w-full h-64 bg-primary/5 blur-[100px] pointer-events-none" />
 
-      {}
+      {/* Brand Header */}
       <div className="px-6 mb-8 flex items-center gap-3 relative z-10">
-        <div className="relative group">
-          <div className="absolute -inset-1.5 bg-primary/20 blur-md rounded-2xl group-hover:bg-primary/30 transition-all duration-500" />
-          <div className="relative w-10 h-10 rounded-xl bg-sidebar border border-sidebar-border flex items-center justify-center shadow-2xl overflow-hidden">
-             <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent" />
-             <BookOpen className="w-5 h-5 text-primary relative z-10" />
-          </div>
+        <div 
+          className="cursor-pointer flex items-center justify-center transition-transform hover:scale-105 duration-200" 
+          onClick={() => { setActiveTab('home'); onSelectRoom?.(''); }}
+          title="Studix Home"
+        >
+          <StudixLogo size={36} className="shrink-0" />
         </div>
         <div className="flex flex-col">
           <span className="text-lg font-black tracking-[-0.03em] text-foreground leading-tight">Studix</span>
-          <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase opacity-60">Study Rooms</span>
+          <span className="text-[10px] font-bold tracking-[0.2em] text-primary uppercase opacity-70">Study Rooms</span>
         </div>
       </div>
 
