@@ -524,7 +524,7 @@ VITE_API_URL=http://127.0.0.1:4000
 # =================================================================
 # DATABASE & CACHE CONNECTIONS
 # =================================================================
-MONGO_URI=mongodb+srv://admin:securepassword@cluster0.mongodb.net/studix?retryWrites=true&w=majority
+MONGO_URI=your mongo db credentials 
 REDIS_ENABLED=true
 REDIS_URL=rediss://default:password@eu1-studix.upstash.io:6379
 
