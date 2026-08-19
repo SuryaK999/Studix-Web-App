@@ -533,7 +533,7 @@ REDIS_URL=rediss://default:password@eu1-studix.upstash.io:6379
 # =================================================================
 PORT=4000
 CLIENT_ORIGIN=http://127.0.0.1:5173,http://localhost:5173
-FIREBASE_PROJECT_ID=studix-app999
+FIREBASE_PROJECT_ID=your-firebase-project-id
 GOOGLE_APPLICATION_CREDENTIALS=./serviceAccountKey.json
 ```
 

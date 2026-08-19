@@ -4,16 +4,16 @@ To enable voice recordings and file uploads, you must configure Firebase Storage
 
 ## 1. Get your Storage Bucket Name
 1.  Go to the [Firebase Console](https://console.firebase.google.com/).
-2.  Select your project (**studix-app999**).
+2.  Select your project (e.g. **your-project-id**).
 3.  Click on **Build** -> **Storage** in the left sidebar.
-4.  Copy the URL shown at the top (e.g., `studix-app999.firebasestorage.app`).
+4.  Copy the URL shown at the top (e.g., `your-project-id.firebasestorage.app`).
     - *Note: Do not include the `gs://` prefix.*
 
 ## 2. Update your `.env` File
 Ensure your `.env` file contains the following line:
 
 ```env
-VITE_FIREBASE_STORAGE_BUCKET=studix-app999.firebasestorage.app
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
 ```
 
 ## 3. Enable Storage Rules

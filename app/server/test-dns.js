@@ -1,5 +1,17 @@
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const dns = require('dns');
-const host = '_mongodb._tcp.studix.jttjqci.mongodb.net';
+
+let standardHost = 'cluster0.xxxxx.mongodb.net';
+if (process.env.MONGO_URI) {
+  try {
+    const match = process.env.MONGO_URI.match(/@([^/?]+)/);
+    if (match && match[1]) {
+      standardHost = match[1];
+    }
+  } catch (e) {}
+}
+
+const host = `_mongodb._tcp.${standardHost}`;
 
 console.log(`Testing SRV lookup for: ${host}`);
 
@@ -16,7 +28,6 @@ dns.resolveSrv(host, (err, addresses) => {
   }
 });
 
-const standardHost = 'studix.jttjqci.mongodb.net';
 console.log(`Testing A record lookup for: ${standardHost}`);
 dns.resolve4(standardHost, (err, addresses) => {
   if (err) {

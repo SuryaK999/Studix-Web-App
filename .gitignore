@@ -14,14 +14,31 @@ techstackUsed.txt
 # ========================
 # SENSITIVE / SECRET FILES
 # ========================
-# Environment variables (API keys, DB passwords, etc.)
+# Environment variables (API keys, DB passwords, secrets)
 .env
-.env.local
-.env.production
-.env.*.local
+.env.*
+!.env.example
+*.env
+*.env.*
+!*.env.example
 
-# Firebase service account key (NEVER upload this!)
+# Firebase & Google Cloud Service Account Keys / Certificates
 serviceAccountKey.json
+*serviceAccount*.json
+*service-account*.json
+*credentials*.json
+google-services.json
+GoogleService-Info.plist
+*.pem
+*.key
+*.cert
+*.crt
+*.pfx
+*.p12
+
+# Secret vaults & local storage
+.env.vault
+*.kdbx
 
 # ========================
 # DEPENDENCIES
