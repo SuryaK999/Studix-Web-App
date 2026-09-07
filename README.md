@@ -496,7 +496,7 @@ studix/
 # =================================================================
 # FIREBASE CREDENTIALS (Authentication & Firestore Tasks)
 # =================================================================
-VITE_FIREBASE_API_KEY=AIzaSyA1234567890abcdefghijklmnopqrst
+VITE_FIREBASE_API_KEY=your_firebase_Api_Key
 VITE_FIREBASE_AUTH_DOMAIN=studix-workspace.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=studix-workspace
 VITE_FIREBASE_STORAGE_BUCKET=studix-workspace.appspot.com
