@@ -11,6 +11,7 @@ import { useRoomPresence } from '@/hooks/usePresence';
 import { socketService } from '@/lib/socket';
 import { cn } from '@/lib/utils';
 import { updateUserProfile } from '@/services/api';
+import { toast } from 'sonner';
 
 function MemberSkeleton() {
   return (
