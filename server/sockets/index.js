@@ -23,7 +23,7 @@ function initSockets(io) {
 
     setOnline(user.uid).catch(() => {});
 
-    socket.on('room:join', ({ roomId }) => {
+    socket.on('room:join', async ({ roomId }) => {
       if (!roomId || typeof roomId !== 'string') return;
 
       const prevInfo = socketMap.get(socket.id);
@@ -34,9 +34,22 @@ function initSockets(io) {
       socket.join(roomId);
       socketMap.set(socket.id, { roomId, userId: user.uid });
 
+      let dbUsername = null;
+      let dbStatus = null;
+      try {
+        const User = require('../models/User');
+        const dbUser = await User.findOne({ uid: user.uid }).lean();
+        if (dbUser) {
+          dbUsername = dbUser.username || null;
+          dbStatus = dbUser.status || null;
+        }
+      } catch (_) {}
+
       socket.to(roomId).emit('presence:joined', {
         userId:      user.uid,
         displayName: user.displayName,
+        username:    dbUsername,
+        status:      dbStatus,
         photoURL:    user.photoURL,
       });
     });
@@ -48,16 +61,22 @@ function initSockets(io) {
       if (info && info.roomId === roomId) {
         socketMap.delete(socket.id);
       }
-      socket.to(roomId).emit('presence:left', { userId: user.uid });
+      io.to(roomId).emit('presence:left', { userId: user.uid });
     });
 
     socket.on('presence:heartbeat', () => {
       heartbeat(user.uid).catch(() => {});
     });
 
-    socket.on('presence:status', ({ roomId, status }) => {
+    socket.on('presence:status', async ({ roomId, status }) => {
       if (!roomId) return;
-      socket.to(roomId).emit('presence:status_update', {
+      try {
+        const User = require('../models/User');
+        await User.updateOne({ uid: user.uid }, { $set: { status: status || '' } });
+      } catch (e) {
+        console.warn('[Presence] Status persist error:', e.message);
+      }
+      io.to(roomId).emit('presence:status_update', {
         userId:  user.uid,
         status:  status || null,
       });
@@ -65,7 +84,7 @@ function initSockets(io) {
 
     socket.on('presence:profile_update', ({ roomId, updates }) => {
       if (!roomId) return;
-      socket.to(roomId).emit('presence:profile_sync', {
+      io.to(roomId).emit('presence:profile_sync', {
         userId:  user.uid,
         updates: updates,
       });

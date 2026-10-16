@@ -21,18 +21,27 @@ function registerChatHandlers(socket, io) {
         return;
       }
 
-      const safeText = text ? xss(String(text).substring(0, 2000)) : '';
+      const safeText = text ? xss(String(text).substring(0, 4000)) : '';
+
+      const isAiMessage = message.isAi || message.senderId === 'ai-studybuddy';
+      const senderId = isAiMessage ? 'ai-studybuddy' : socket.user.uid;
+      const senderName = isAiMessage ? (message.senderName || 'StudyBuddy AI') : (socket.user.displayName || 'Anonymous');
+      const senderUsername = isAiMessage ? 'ai_assistant' : (socket.user.username || message.senderUsername || null);
+      const senderPhotoURL = isAiMessage ? null : (socket.user.photoURL || null);
 
       const msgPayload = {
-        senderId:       socket.user.uid,
-        senderName:     socket.user.displayName || 'Anonymous',
-        senderPhotoURL: socket.user.photoURL || null,
+        senderId,
+        senderName,
+        senderUsername,
+        senderPhotoURL,
+        isAi: isAiMessage,
         type,
         text:           safeText,
         fileUrl:        fileUrl || null,
         fileName:       fileName || null,
         fileSize:       fileSize || null,
         fileDuration:   fileDuration || null,
+        replyTo:        message.replyTo || null,
         reactions:      {},
         createdAt:      new Date(),
       };

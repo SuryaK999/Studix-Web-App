@@ -195,7 +195,7 @@ export function Sidebar({ onSelectRoom }) {
                 {user?.displayName || 'Anonymous'}
               </span>
               <div className="text-[11px] font-medium tracking-wide text-sidebar-foreground/60 truncate">
-                Online
+                {user?.username ? `@${user.username}` : (user?.status || 'Online')}
               </div>
             </div>
           </div>

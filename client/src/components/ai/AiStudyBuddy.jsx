@@ -18,6 +18,7 @@ import { withRetry } from '@/lib/retry';
 import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 import { PlaceholdersAndVanishInput } from '@/components/ui/placeholders-and-vanish-input';
+import { fetchMessages } from '@/services/api';
 
 const QUICK_ACTIONS = [
   { icon: BookOpen, label: 'Explain', prompt: 'Explain this topic in simple terms with examples.' },
@@ -156,7 +157,16 @@ function generateExpertResponse(
 
 // ─── Component ───────────────────────────────────────────────────
 export function AiStudyBuddy({ roomId }) {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    if (!roomId) return [];
+    try {
+      const cached = localStorage.getItem(`studix_ai_${roomId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [input, setInput] = useState('');
   const [aiState, setAiState] = useState('idle');
   const [context, setContext] = useState('');
@@ -168,7 +178,15 @@ export function AiStudyBuddy({ roomId }) {
   const abortControllerRef = useRef(null);
   const { user } = useAuth();
 
-  // Load message history
+  useEffect(() => {
+    if (roomId && messages.length > 0) {
+      try {
+        localStorage.setItem(`studix_ai_${roomId}`, JSON.stringify(messages.slice(-50)));
+      } catch (_) {}
+    }
+  }, [roomId, messages]);
+
+  // Load message history from Firestore and merge with cached
   useEffect(() => {
     if (!roomId) return;
     const messagesQuery = query(
@@ -183,23 +201,31 @@ export function AiStudyBuddy({ roomId }) {
         const data = doc.data();
         msgs.push({ id: doc.id, role: data.role, content: data.content, timestamp: data.timestamp || 0 });
       });
-      setMessages(msgs);
+      if (msgs.length > 0) {
+        setMessages(msgs);
+      }
     }, (error) => { logger.error('AI chat listener error', 'AiStudyBuddy', error); });
 
     return () => { unsubscribe(); logCleanup(); };
   }, [roomId]);
 
-  // Gather room context
+  // Gather real room context from active chat discussion
   useEffect(() => {
     if (!roomId) return;
-    const q = query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(10));
-    const logCleanup = logger.trackListener(`ai-context/${roomId}`);
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = [];
-      snapshot.forEach((doc) => { const d = doc.data(); if (d.text) msgs.push(d.text); });
-      setContext(msgs.reverse().join(' '));
-    });
-    return () => { unsubscribe(); logCleanup(); };
+    let cancelled = false;
+
+    fetchMessages(roomId)
+      .then(({ messages: roomMsgs }) => {
+        if (cancelled || !roomMsgs || roomMsgs.length === 0) return;
+        const textSnippets = roomMsgs
+          .filter(m => m.text && !m.text.startsWith('Voice message'))
+          .slice(-10)
+          .map(m => `${m.senderName}: ${m.text}`);
+        setContext(textSnippets.join(' | '));
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
   }, [roomId]);
 
   // Auto-scroll

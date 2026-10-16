@@ -20,6 +20,7 @@ import { saveVoice } from '@/services/voiceStorageService';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { fetchMessages } from '@/services/api';
+import { summarizeChatDiscussion, generateAiStudyResponse } from '@/services/aiService';
 import { differenceInMinutes } from 'date-fns';
 
 const PAGE_SIZE = 50;
@@ -29,7 +30,17 @@ export function ChatPanel({ roomId, roomData }) {
   const roomName = useMemo(() => roomData?.name || 'Study Room', [roomData?.name]);
   const isAdmin = useMemo(() => roomData?.adminIds?.includes(user?.uid), [roomData?.adminIds, user?.uid]);
   const avatarUrl = roomData?.avatarUrl;
-  const [messages, setMessages] = useState([]);
+
+  const [messages, setMessages] = useState(() => {
+    if (!roomId) return [];
+    try {
+      const cached = localStorage.getItem(`studix_chat_${roomId}`);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [inputText, setInputText] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -53,6 +64,14 @@ export function ChatPanel({ roomId, roomData }) {
   const { isRecording, recordingDuration, audioBlob, startRecording, stopRecording, clearRecording } = useAudioRecorder();
 
   useEffect(() => {
+    if (roomId && messages.length > 0) {
+      try {
+        localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(messages.slice(-80)));
+      } catch (_) {}
+    }
+  }, [roomId, messages]);
+
+  useEffect(() => {
     if (!roomId) return;
     let cancelled = false;
 
@@ -60,14 +79,18 @@ export function ChatPanel({ roomId, roomData }) {
       try {
         const { messages: msgs, hasMore } = await fetchMessages(roomId);
         if (cancelled) return;
-        setMessages(msgs);
+        setMessages(prev => {
+          const map = new Map();
+          prev.forEach(m => { if (m.id) map.set(String(m.id), m); });
+          msgs.forEach(m => { if (m.id) map.set(String(m.id), m); });
+          return Array.from(map.values()).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        });
         setHasMoreMessages(hasMore);
         if (msgs.length > 0) {
           oldestTimestampRef.current = msgs[0].createdAt ?? null;
         }
       } catch (err) {
         logger.error('Failed to load messages', 'ChatPanel', err);
-        toast.error('Failed to load chat history.');
       }
     };
 
@@ -288,6 +311,7 @@ export function ChatPanel({ roomId, roomData }) {
       text:           trimmed,
       senderId:       user.uid,
       senderName:     user.displayName || 'Anonymous',
+      senderUsername: user.username || user.uniqueId || '',
       senderPhotoURL: user.photoURL,
       reactions:      {},
       replyTo:        replyTarget ? {
@@ -311,7 +335,53 @@ export function ChatPanel({ roomId, roomData }) {
     setIsLoading(false);
 
     setTimeout(() => scrollToBottom('smooth'), 100);
-  }, [inputText, user, roomId, socket, isLoading, scrollToBottom]);
+
+    // AI Mention Detection (@ai, @studybuddy, /ai, ai:)
+    const isAiQuery = /(@ai|@studybuddy|\/ai|^ai:)/i.test(trimmed);
+    if (isAiQuery) {
+      setTimeout(async () => {
+        try {
+          const aiText = await generateAiStudyResponse(trimmed, [...messages, payload]);
+          const aiTempId = `ai-${Date.now()}`;
+          const aiPayload = {
+            tempId:         aiTempId,
+            type:           'text',
+            text:           aiText,
+            senderId:       'ai-studybuddy',
+            senderName:     'StudyBuddy AI',
+            senderUsername: 'studybuddy',
+            isAi:           true,
+            reactions:      {},
+            replyTo: {
+              id:         tempId,
+              text:       trimmed.length > 80 ? trimmed.slice(0, 77) + '...' : trimmed,
+              senderName: user.displayName || 'Anonymous'
+            },
+            createdAt:      new Date().toISOString(),
+          };
+
+          setMessages(prev => [...prev, { id: aiTempId, ...aiPayload }]);
+          socket.emit('chat:send', { roomId, message: aiPayload });
+          setTimeout(() => scrollToBottom('smooth'), 100);
+        } catch (err) {
+          logger.error('Failed to generate AI response in chat', 'ChatPanel', err);
+        }
+      }, 500);
+    }
+  }, [inputText, user, roomId, socket, isLoading, replyTarget, messages, scrollToBottom]);
+
+  // Handle "Explain with AI" triggered from message items
+  useEffect(() => {
+    const handleAiExplain = (e) => {
+      const msg = e.detail?.message;
+      if (!msg || !msg.text) return;
+      const explainQuery = `@ai Explain this concept clearly: "${msg.text.slice(0, 160)}"`;
+      sendMessage(explainQuery);
+    };
+
+    window.addEventListener('studix:ai-explain', handleAiExplain);
+    return () => window.removeEventListener('studix:ai-explain', handleAiExplain);
+  }, [sendMessage]);
 
   const handleFileUpload = useCallback(async (file, type) => {
     if (!user || !socket) return;
@@ -448,11 +518,16 @@ export function ChatPanel({ roomId, roomData }) {
 
   const generateSummary = useCallback(async () => {
     setIsSummarizing(true);
-    setTimeout(() => {
-      setSummary(`Summary of recent discussion:\n\nThe group has been discussing various topics. Key points include collaborative study strategies, sharing resources, and planning upcoming sessions.\n\n(This is a demo summary. Connect Gemini API for real summarization.)`);
+    setShowSummaryModal(true);
+    try {
+      const summaryResult = summarizeChatDiscussion(messages);
+      setSummary(summaryResult);
+    } catch {
+      setSummary("Unable to summarize discussion at this time.");
+    } finally {
       setIsSummarizing(false);
-    }, 1500);
-  }, []);
+    }
+  }, [messages]);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
@@ -801,8 +876,35 @@ export function ChatPanel({ roomId, roomData }) {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
               </div>
             ) : (
-              <div className="bg-card text-card-foreground rounded-lg p-4 max-h-96 overflow-y-auto">
-                <p className="text-sm whitespace-pre-wrap">{summary}</p>
+              <div className="space-y-4">
+                <div className="bg-white/5 border border-white/10 text-[#E8EAF0] rounded-xl p-4 max-h-96 overflow-y-auto">
+                  <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap font-sans">{summary}</p>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-white/10 text-white/70 hover:text-white"
+                    onClick={() => {
+                      navigator.clipboard.writeText(summary);
+                      toast.success('Summary copied to clipboard');
+                    }}
+                  >
+                    Copy
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="bg-primary hover:bg-primary/90 text-white gap-1.5"
+                    onClick={() => {
+                      sendMessage(summary);
+                      setShowSummaryModal(false);
+                      toast.success('Shared summary to room chat');
+                    }}
+                  >
+                    <Send size={13} />
+                    Post to Room Chat
+                  </Button>
+                </div>
               </div>
             )}
           </div>

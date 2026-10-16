@@ -19,7 +19,9 @@ import { db } from '@/lib/firebase/config';
 import { doc, onSnapshot, collection, addDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { StudyRoomThemeProvider, useStudyRoomTheme } from '@/hooks/useStudyRoomTheme';
 import { cn } from '@/lib/utils';
-import { fetchUserRooms, fetchRoomData } from '@/services/api';
+import { fetchUserRooms, fetchRoomData, leaveRoom } from '@/services/api';
+import { socketService } from '@/lib/socket';
+import { useNavigate } from 'react-router-dom';
 import { useInvisibleScroll } from '@/hooks/useInvisibleScroll';
 import { useRef } from 'react';
 import { addRecentRoom } from '@/utils/recentRooms';
@@ -64,8 +66,23 @@ export function StudyRoom({ roomId, onLeave }) {
 
 function StudyRoomContent({ roomId, onLeave }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   usePresence(roomId);
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem(`studix_room_tab_${roomId}`) || 'chat';
+  });
+
+  useEffect(() => {
+    if (roomId && activeTab) {
+      localStorage.setItem(`studix_room_tab_${roomId}`, activeTab);
+    }
+  }, [roomId, activeTab]);
+
+  useEffect(() => {
+    if (roomId) {
+      localStorage.setItem('studix_last_room', roomId);
+    }
+  }, [roomId]);
   const [showSettings, setShowSettings] = useState(false);
   const [rooms, setRooms] = useState([]);
   const [currentRoom, setCurrentRoom] = useState(null);
@@ -79,9 +96,34 @@ function StudyRoomContent({ roomId, onLeave }) {
   const [customChannels, setCustomChannels] = useState([]);
 
   const handleRoomSwitchClick = (targetRoomId, isActive) => {
-    if (isActive) return;
-    setPendingSwitchRoomId(targetRoomId);
-    setShowSwitchModal(true);
+    if (isActive || !targetRoomId) return;
+    navigate(`/room/${targetRoomId}`);
+  };
+
+  const handleLeaveRoom = async () => {
+    try {
+      await leaveRoom(roomId);
+    } catch (err) {
+      console.warn('API leave room notice:', err);
+    }
+    try {
+      const socket = await socketService.connect();
+      socket.emit('room:leave', { roomId });
+    } catch (_) {}
+    window.dispatchEvent(new Event('roomsUpdated'));
+    setShowLeaveModal(false);
+    if (onLeave) onLeave();
+    else navigate('/');
+  };
+
+  const handleConfirmSwitch = () => {
+    setShowSwitchModal(false);
+    if (pendingSwitchRoomId) {
+      navigate(`/room/${pendingSwitchRoomId}`);
+    } else {
+      if (onLeave) onLeave();
+      else navigate('/');
+    }
   };
 
   const [leftWidth, setLeftWidth] = useState(240);
@@ -229,7 +271,11 @@ function StudyRoomContent({ roomId, onLeave }) {
          style={{ colorScheme: activeTheme === 'light' ? 'light' : 'dark' }}>
       
       <nav className="w-[72px] bg-[#0C0D12] flex flex-col items-center py-3 shrink-0 z-30 border-r border-white/[0.04]">
-        <div className="w-12 h-12 rounded-[16px] bg-primary flex items-center justify-center shrink-0 mb-3 cursor-pointer shadow-[0_4px_20px_rgba(113,72,235,0.35)] hover:rounded-[12px] transition-all duration-200">
+        <div 
+          onClick={() => navigate('/')}
+          className="w-12 h-12 rounded-[16px] bg-primary flex items-center justify-center shrink-0 mb-3 cursor-pointer shadow-[0_4px_20px_rgba(113,72,235,0.35)] hover:rounded-[12px] transition-all duration-200"
+          title="Return to Dashboard"
+        >
           <Bot className="w-7 h-7 text-white" />
         </div>
         
@@ -237,9 +283,10 @@ function StudyRoomContent({ roomId, onLeave }) {
 
         <div ref={roomRailRef} className="flex-1 overflow-y-auto w-full flex flex-col items-center space-y-2 custom-scrollbar no-scrollbar">
           {rooms.map((room) => {
-            const isActive = room.id === roomId;
+            const rId = room.id || room._id?.toString();
+            const isActive = String(rId) === String(roomId);
             return (
-              <RailRoomIcon key={room.id} room={room} isActive={isActive} onSwitch={() => handleRoomSwitchClick(room.id, isActive)} />
+              <RailRoomIcon key={rId} room={room} isActive={isActive} onSwitch={() => handleRoomSwitchClick(rId, isActive)} />
             );
           })}
         </div>
@@ -468,7 +515,10 @@ function StudyRoomContent({ roomId, onLeave }) {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-[11px] font-black text-[#4A4D57] uppercase tracking-[0.12em]">Members</h4>
-              <button className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors duration-200 px-2 py-0.5 rounded hover:bg-primary/10">
+              <button 
+                onClick={() => window.dispatchEvent(new CustomEvent('studix:open-status-dialog'))}
+                className="text-[10px] font-bold text-primary/60 hover:text-primary transition-colors duration-200 px-2 py-0.5 rounded hover:bg-primary/10"
+              >
                 Set Status
               </button>
             </div>
@@ -500,7 +550,7 @@ function StudyRoomContent({ roomId, onLeave }) {
           </DialogHeader>
           <DialogFooter className="mt-6 flex items-center gap-3">
             <Button variant="ghost" onClick={() => setShowLeaveModal(false)} className="text-[#A1A3AB] hover:text-white hover:bg-white/5">Cancel</Button>
-            <Button variant="destructive" onClick={onLeave} className="bg-[#F43F5E] hover:bg-[#E11D48] text-white">Leave Room</Button>
+            <Button variant="destructive" onClick={handleLeaveRoom} className="bg-[#F43F5E] hover:bg-[#E11D48] text-white">Leave Room</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -510,17 +560,14 @@ function StudyRoomContent({ roomId, onLeave }) {
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-white">Switch Room?</DialogTitle>
             <DialogDescription className="text-[#A1A3AB]">
-              You are about to navigate away from {currentRoom?.name}. To join another room, you will first return to the lobby. Proceed?
+              You are about to switch to another study room. Proceed?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6 flex items-center gap-3">
             <Button variant="ghost" onClick={() => setShowSwitchModal(false)} className="text-[#A1A3AB] hover:text-white hover:bg-white/5">Cancel</Button>
             <Button 
                className="bg-primary hover:bg-primary/90 text-white"
-               onClick={() => {
-                 setShowSwitchModal(false);
-                 onLeave();
-               }}
+               onClick={handleConfirmSwitch}
             >
               Switch Room
             </Button>
@@ -560,17 +607,20 @@ function StudyRoomContent({ roomId, onLeave }) {
 }
 
 function RailRoomIcon({ room, isActive, onSwitch }) {
+  const rId = room.id || room._id?.toString();
   const [avatarUrl, setAvatarUrl] = useState(room.avatarUrl);
 
   useEffect(() => {
-    
-    const unsub = onSnapshot(doc(db, 'rooms', room.id), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().avatarUrl) {
-        setAvatarUrl(docSnap.data().avatarUrl);
-      }
-    });
-    return () => unsub();
-  }, [room.id]);
+    if (!rId) return;
+    try {
+      const unsub = onSnapshot(doc(db, 'rooms', rId), (docSnap) => {
+        if (docSnap.exists() && docSnap.data().avatarUrl) {
+          setAvatarUrl(docSnap.data().avatarUrl);
+        }
+      }, () => {});
+      return () => unsub();
+    } catch (_) {}
+  }, [rId]);
 
   return (
     <div className="relative group flex items-center">

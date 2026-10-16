@@ -97,11 +97,13 @@ export function UserSettings({ open, onOpenChange, roomId }) {
       
       const cached = localStorage.getItem('studix_prefs');
       if (cached) {
-        const parsed = JSON.parse(cached);
-        setPreferences({
-          ...preferences,
-          ...parsed
-        });
+        try {
+          const parsed = JSON.parse(cached);
+          setPreferences(prev => ({
+            ...prev,
+            ...parsed
+          }));
+        } catch (_) {}
       }
     }
   }, [open, user]);
@@ -173,8 +175,11 @@ export function UserSettings({ open, onOpenChange, roomId }) {
       setProfile(updated);
       toast.success('Profile updated successfully');
       window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: updated }));
-      if (socket && roomId) {
-        socket.emit('presence:profile_update', { roomId, updates: { displayName: updated.displayName, username: updated.username } });
+      
+      const targetRoomId = roomId || localStorage.getItem('studix_last_room');
+      if (socket && targetRoomId) {
+        socket.emit('presence:profile_update', { roomId: targetRoomId, updates: { displayName: updated.displayName, username: updated.username, status: updated.status } });
+        socket.emit('presence:status', { roomId: targetRoomId, status: updated.status });
       }
     } catch (error) {
       toast.error(error.message || 'Failed to save');

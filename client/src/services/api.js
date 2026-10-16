@@ -98,3 +98,7 @@ export async function joinRoom(roomId) {
 export async function fetchRoomPresence(roomId) {
   return get(`/api/rooms/${encodeURIComponent(roomId)}/presence`);
 }
+
+export async function leaveRoom(roomId) {
+  return post(`/api/rooms/${encodeURIComponent(roomId)}/leave`, {});
+}

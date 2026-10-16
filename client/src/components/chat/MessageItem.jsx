@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Copy, Edit2, Trash2, Reply, SmilePlus,
   Bot, Clock, CheckCircle2, AlertCircle, FileText, Download, Play, Pause, ExternalLink,
-  MessageSquare
+  MessageSquare, Sparkles
 } from 'lucide-react';
 import { cn, getServerUrl } from '@/lib/utils';
 
@@ -21,9 +21,10 @@ export const MessageItem = memo(function MessageItem({
 }) {
   const users = useUsersStore(state => state.users);
   const realUser = users[message.senderId];
-  const displayName = realUser?.displayName || realUser?.name || message.senderName || 'Anonymous';
+  const isAi = message.isAi || message.senderId === 'ai-studybuddy' || message.senderName?.toLowerCase().includes('studybuddy');
+  const displayName = isAi ? 'StudyBuddy AI' : (realUser?.displayName || realUser?.name || message.senderName || 'Anonymous');
   const photoURL = realUser?.photoURL || realUser?.avatarUrl || message.senderPhotoURL || undefined;
-  const uniqueId = realUser?.uniqueId || null;
+  const uniqueId = isAi ? 'studybuddy' : (realUser?.username || realUser?.uniqueId || message.senderUsername || null);
 
   const [showActions, setShowActions] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -269,7 +270,44 @@ export const MessageItem = memo(function MessageItem({
         )}
 
         <div className="relative">
-          <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap">{message.text}</p>
+          {isAi ? (
+            <div className="space-y-2 text-[14.2px] leading-relaxed pr-14">
+              {message.text.split('\n\n').map((para, i) => {
+                const trimmed = para.trim();
+                if (trimmed.startsWith('### ')) {
+                  return (
+                    <h4 key={i} className="text-[13.5px] font-bold text-purple-300 mt-2 mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                      {trimmed.replace(/^###\s+/, '')}
+                    </h4>
+                  );
+                }
+                if (trimmed.startsWith('```')) {
+                  const code = trimmed.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '');
+                  return (
+                    <pre key={i} className="bg-black/40 border border-purple-500/20 rounded-lg p-2.5 text-xs font-mono text-purple-200 overflow-x-auto my-1.5">
+                      <code>{code}</code>
+                    </pre>
+                  );
+                }
+                return (
+                  <p key={i} className="whitespace-pre-wrap">
+                    {trimmed.split(/(\*\*.*?\*\*|`.*?`)/g).map((part, j) => {
+                      if (part.startsWith('**') && part.endsWith('**')) {
+                        return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
+                      }
+                      if (part.startsWith('`') && part.endsWith('`')) {
+                        return <code key={j} className="bg-black/30 text-purple-300 px-1 py-0.5 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
+                      }
+                      return part;
+                    })}
+                  </p>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap">{message.text}</p>
+          )}
           {message.editedAt && (
             <span className="text-[9px] text-white/30 italic ml-1 select-none">(edited)</span>
           )}
@@ -299,11 +337,22 @@ export const MessageItem = memo(function MessageItem({
     >
       <div className="w-9 h-9 flex-shrink-0 relative">
         {isFirstInGroup && !isOwn && (
-          <Avatar className="h-9 w-9 shadow-md border border-white/[0.08] animate-in zoom-in-50 duration-300 shrink-0">
-            <AvatarImage src={photoURL} className="object-cover" />
-            <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white text-[10px] font-bold">
-              {getInitials(displayName)}
-            </AvatarFallback>
+          <Avatar className={cn(
+            "h-9 w-9 shadow-md shrink-0 animate-in zoom-in-50 duration-300",
+            isAi ? "border border-purple-500/50 shadow-purple-500/20" : "border border-white/[0.08]"
+          )}>
+            {isAi ? (
+              <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white">
+                <Bot className="w-5 h-5 text-white" />
+              </div>
+            ) : (
+              <>
+                <AvatarImage src={photoURL} className="object-cover" />
+                <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-white text-[10px] font-bold">
+                  {getInitials(displayName)}
+                </AvatarFallback>
+              </>
+            )}
           </Avatar>
         )}
       </div>
@@ -311,7 +360,10 @@ export const MessageItem = memo(function MessageItem({
       <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
         {isFirstInGroup && !isOwn && (
           <div className="flex items-center gap-2 mb-1 ml-1 scale-in-center overflow-hidden">
-            <span className="text-[12.5px] font-extrabold text-[#B4A0FF] capitalize tracking-tight truncate max-w-[120px]">
+            <span className={cn(
+              "text-[12.5px] font-extrabold capitalize tracking-tight truncate max-w-[120px]",
+              isAi ? "text-purple-300" : "text-[#B4A0FF]"
+            )}>
               {displayName}
             </span>
             {uniqueId && (
@@ -319,7 +371,12 @@ export const MessageItem = memo(function MessageItem({
                 @{uniqueId}
               </span>
             )}
-            {isAdmin && (
+            {isAi && (
+              <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/40 shrink-0 flex items-center gap-1">
+                <Sparkles className="w-2.5 h-2.5" /> AI TUTOR
+              </span>
+            )}
+            {isAdmin && !isAi && (
               <span className="px-1.5 py-0.5 rounded bg-primary/20 text-primary text-[9px] font-black uppercase tracking-widest border border-primary/30 shrink-0">
                 Admin
               </span>
@@ -333,7 +390,9 @@ export const MessageItem = memo(function MessageItem({
               "px-4 py-2.5 rounded-2xl relative shadow-sm border transition-all duration-300",
               isOwn
                 ? 'bg-gradient-to-br from-primary to-purple-600 text-white border-white/10 shadow-[0_4px_16px_rgba(113,72,235,0.15)]'
-                : 'bg-white/[0.03] backdrop-blur-md text-[#E8EAF0] border-white/10',
+                : isAi
+                  ? 'bg-purple-950/25 backdrop-blur-md text-[#E8EAF0] border-purple-500/30 shadow-[0_4px_20px_rgba(168,85,247,0.12)]'
+                  : 'bg-white/[0.03] backdrop-blur-md text-[#E8EAF0] border-white/10',
               isFirstInGroup && isOwn && "rounded-tr-none",
               isFirstInGroup && !isOwn && "rounded-tl-none",
               !isFirstInGroup && "rounded-[1.2rem]"
@@ -345,7 +404,9 @@ export const MessageItem = memo(function MessageItem({
                   "absolute top-0 w-3 h-3",
                   isOwn
                     ? "right-[-6px] bg-primary [clip-path:polygon(0%_0%,100%_0%,0%_100%)]"
-                    : "left-[-6px] bg-white/[0.03] backdrop-blur-md [clip-path:polygon(0%_0%,100%_0%,100%_100%)]"
+                    : isAi
+                      ? "left-[-6px] bg-purple-950/25 backdrop-blur-md [clip-path:polygon(0%_0%,100%_0%,100%_100%)]"
+                      : "left-[-6px] bg-white/[0.03] backdrop-blur-md [clip-path:polygon(0%_0%,100%_0%,100%_100%)]"
                 )}
               />
             )}
@@ -377,20 +438,37 @@ export const MessageItem = memo(function MessageItem({
             </div>
 
             {!isEditing && showActions && (
-              <button
-                data-reaction-trigger="1"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const reactionArea = containerRef.current?.querySelector('[data-reaction-area]');
-                  (reactionArea)?.click();
-                }}
-                className={cn(
-                  "absolute top-[-10px] w-6 h-6 rounded-full bg-[#1e1f2b] border border-white/10 flex items-center justify-center text-[#8e9297] hover:text-white hover:bg-primary/20 hover:border-primary/30 transition-all duration-200 z-30 shadow-xl",
-                  isOwn ? "left-[-10px]" : "right-[-10px]"
+              <div className={cn(
+                "absolute top-[-10px] flex items-center gap-1.5 z-30",
+                isOwn ? "left-[-10px]" : "right-[-10px]"
+              )}>
+                {!isAi && message.text && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
+                      toast.info('Asking StudyBuddy AI to explain...');
+                    }}
+                    title="Explain with StudyBuddy AI"
+                    className="h-6 px-2 rounded-full bg-[#1e1f2b] border border-purple-500/40 flex items-center gap-1 text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all duration-200 shadow-xl text-[10px] font-medium"
+                  >
+                    <Sparkles size={11} className="text-purple-400" />
+                    <span>Explain</span>
+                  </button>
                 )}
-              >
-                <SmilePlus size={14} />
-              </button>
+                <button
+                  data-reaction-trigger="1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const reactionArea = containerRef.current?.querySelector('[data-reaction-area]');
+                    (reactionArea)?.click();
+                  }}
+                  className="w-6 h-6 rounded-full bg-[#1e1f2b] border border-white/10 flex items-center justify-center text-[#8e9297] hover:text-white hover:bg-primary/20 hover:border-primary/30 transition-all duration-200 shadow-xl"
+                >
+                  <SmilePlus size={14} />
+                </button>
+              </div>
             )}
           </div>
 

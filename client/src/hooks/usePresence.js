@@ -50,10 +50,17 @@ export function usePresence(roomId) {
 export function useRoomPresence(roomId) {
   const [presence, setPresence] = useState({});
 
-  const handleJoined = useCallback(({ userId, displayName, photoURL }) => {
+  const handleJoined = useCallback(({ userId, displayName, username, status, photoURL }) => {
     setPresence(prev => ({
       ...prev,
-      [userId]: { userId, displayName, photoURL: photoURL ?? null, isOnline: true },
+      [userId]: { 
+        userId, 
+        displayName, 
+        username: username || prev[userId]?.username || null,
+        status: status || prev[userId]?.status || null,
+        photoURL: photoURL ?? prev[userId]?.photoURL ?? null, 
+        isOnline: true 
+      },
     }));
   }, []);
 
@@ -67,12 +74,22 @@ export function useRoomPresence(roomId) {
     });
   }, []);
 
-  const handleProfileSync = useCallback(({ userId, updates }) => {
+  const handleStatusUpdate = useCallback(({ userId, status }) => {
     setPresence(prev => {
-      if (!prev[userId]) return prev;
+      const existing = prev[userId] || { userId, isOnline: true };
       return {
         ...prev,
-        [userId]: { ...prev[userId], ...updates }
+        [userId]: { ...existing, status }
+      };
+    });
+  }, []);
+
+  const handleProfileSync = useCallback(({ userId, updates }) => {
+    setPresence(prev => {
+      const existing = prev[userId] || { userId, isOnline: true };
+      return {
+        ...prev,
+        [userId]: { ...existing, ...updates }
       };
     });
   }, []);
@@ -90,7 +107,9 @@ export function useRoomPresence(roomId) {
           initialPresence[u.uid] = { 
             userId: u.uid, 
             displayName: u.displayName, 
+            username: u.username || null,
             photoURL: u.photoURL, 
+            status: u.status || null,
             isOnline: true 
           };
         });
@@ -103,6 +122,7 @@ export function useRoomPresence(roomId) {
       socket = s;
       socket.on('presence:joined', handleJoined);
       socket.on('presence:left',   handleLeft);
+      socket.on('presence:status_update', handleStatusUpdate);
       socket.on('presence:profile_sync', handleProfileSync);
     }).catch(() => {});
 
@@ -110,11 +130,12 @@ export function useRoomPresence(roomId) {
       if (socket) {
         socket.off('presence:joined', handleJoined);
         socket.off('presence:left',   handleLeft);
+        socket.off('presence:status_update', handleStatusUpdate);
         socket.off('presence:profile_sync', handleProfileSync);
       }
       setPresence({});
     };
-  }, [roomId, handleJoined, handleLeft]);
+  }, [roomId, handleJoined, handleLeft, handleStatusUpdate, handleProfileSync]);
 
   return presence;
 }

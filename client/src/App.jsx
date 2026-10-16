@@ -30,7 +30,7 @@ function RoomRouteWrapper() {
   const navigate = useNavigate();
   return (
     <Suspense fallback={<LoadingScreen />}>
-      <StudyRoom roomId={id} onLeave={() => navigate('/')} />
+      <StudyRoom key={id} roomId={id} onLeave={() => navigate('/')} />
     </Suspense>
   );
 }

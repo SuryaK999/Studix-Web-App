@@ -16,8 +16,25 @@ import { logger } from '@/lib/logger';
 const AuthContext = createContext(undefined);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const cached = localStorage.getItem('studix_user');
+      return cached ? JSON.parse(cached) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      try {
+        localStorage.setItem('studix_user', JSON.stringify(user));
+      } catch (_) {}
+    } else if (!loading) {
+      localStorage.removeItem('studix_user');
+    }
+  }, [user, loading]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -29,7 +46,7 @@ export function AuthProvider({ children }) {
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
         };
-        setUser(basicUser);
+        setUser(prev => ({ ...(prev || {}), ...basicUser }));
 
         try {
           const profile = await fetchUserProfile();

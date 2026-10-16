@@ -5,7 +5,9 @@ const messageSchema = new mongoose.Schema(
     roomId:         { type: String, required: true, index: true },
     senderId:       { type: String, required: true },
     senderName:     { type: String, required: true },
+    senderUsername: { type: String, default: null },
     senderPhotoURL: { type: String, default: null },
+    isAi:           { type: Boolean, default: false },
     type:           { type: String, enum: ['text', 'image', 'file', 'voice'], default: 'text' },
     text:           { type: String, default: '' },
     fileUrl:        { type: String, default: null },
@@ -14,6 +16,7 @@ const messageSchema = new mongoose.Schema(
     fileDuration:   { type: Number, default: null },
     reactions:      { type: mongoose.Schema.Types.Mixed, default: {} },
     reactionUsers:  { type: mongoose.Schema.Types.Mixed, default: {} },
+    replyTo:        { type: mongoose.Schema.Types.Mixed, default: null },
     editedAt:       { type: Date, default: null },
   },
   {

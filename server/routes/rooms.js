@@ -81,7 +81,9 @@ router.get('/explore', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const room = await Room.findById(id);
+    const mongoose = require('mongoose');
+    const isValidId = mongoose.Types.ObjectId.isValid(id);
+    const room = isValidId ? await Room.findById(id) : await Room.findOne({ inviteCode: id });
     if (!room) return res.status(404).json({ error: 'Room not found' });
 
     if (!room.inviteCode) {
@@ -89,12 +91,22 @@ router.get('/:id', async (req, res) => {
       await room.save();
     }
 
-    const memberships = await Membership.find({ roomId: id }).lean();
+    const roomIdStr = room._id.toString();
+
+    if (req.user?.uid) {
+      await Membership.updateOne(
+        { roomId: roomIdStr, userId: req.user.uid },
+        { $setOnInsert: { roomId: roomIdStr, userId: req.user.uid, joinedAt: new Date() } },
+        { upsert: true }
+      );
+    }
+
+    const memberships = await Membership.find({ roomId: roomIdStr }).lean();
     const members = memberships.map(m => m.userId);
 
     res.json({
       ...room.toObject(),
-      id: room._id.toString(),
+      id: roomIdStr,
       members
     });
   } catch (err) {
@@ -111,7 +123,7 @@ router.get('/:id/presence', async (req, res) => {
     const onlineUids = await getOnlineUsers(userIds);
 
     const User = require('../models/User');
-    const onlineUsers = await User.find({ uid: { $in: onlineUids } }, 'uid displayName photoURL').lean();
+    const onlineUsers = await User.find({ uid: { $in: onlineUids } }, 'uid displayName username photoURL status').lean();
     
     res.json(onlineUsers);
   } catch (err) {
@@ -196,6 +208,25 @@ router.post('/:idOrCode/join', async (req, res) => {
   } catch (err) {
     console.error('[API/rooms] Join error:', err.message);
     res.status(500).json({ error: 'Failed to join room' });
+  }
+});
+
+router.post('/:id/leave', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const uid = req.user.uid;
+
+    await Membership.deleteOne({ roomId: id, userId: uid });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(id).emit('presence:left', { userId: uid });
+    }
+
+    res.json({ success: true, message: 'Successfully left room' });
+  } catch (err) {
+    console.error('[API/rooms] Leave error:', err.message);
+    res.status(500).json({ error: 'Failed to leave room' });
   }
 });
 

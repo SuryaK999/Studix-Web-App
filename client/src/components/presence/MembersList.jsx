@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRoomPresence } from '@/hooks/usePresence';
 import { socketService } from '@/lib/socket';
 import { cn } from '@/lib/utils';
+import { updateUserProfile } from '@/services/api';
 
 function MemberSkeleton() {
   return (
@@ -28,9 +29,15 @@ export function MembersList({ roomId }) {
   const presence = useRoomPresence(roomId);
   const [loading, setLoading] = useState(true);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
-  const [customStatus, setCustomStatus] = useState('');
+  const [customStatus, setCustomStatus] = useState(user?.status || '');
   const [speakingUsers, setSpeakingUsers] = useState(new Set()); // userId set
   const socketToUserRef = useRef({}); // socketId -> userId
+
+  useEffect(() => {
+    if (user?.status) {
+      setCustomStatus(user.status);
+    }
+  }, [user?.status]);
 
   // Stop skeleton after first presence update
   useEffect(() => {
@@ -43,22 +50,35 @@ export function MembersList({ roomId }) {
   }, [presence]);
 
   const getInitials = useCallback((name) =>
-    name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
+    (name || 'Anonymous').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
   []);
 
   // Build sorted member list from socket presence events
   const members = Object.values(presence).sort((a, b) => {
-    if (a.isOnline === b.isOnline) return a.displayName.localeCompare(b.displayName);
+    if (a.isOnline === b.isOnline) return (a.displayName || '').localeCompare(b.displayName || '');
     return a.isOnline ? -1 : 1;
   });
 
-  // Removed unused onlineCount
+  useEffect(() => {
+    const handleOpen = () => setShowStatusDialog(true);
+    window.addEventListener('studix:open-status-dialog', handleOpen);
+    return () => window.removeEventListener('studix:open-status-dialog', handleOpen);
+  }, []);
 
   const saveStatus = useCallback(async () => {
+    const trimmed = customStatus.trim();
     try {
       const socket = await socketService.connect();
-      socket.emit('presence:status', { roomId, status: customStatus || null });
+      socket.emit('presence:status', { roomId, status: trimmed || null });
     } catch (_) {}
+
+    try {
+      await updateUserProfile({ status: trimmed });
+      window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: { status: trimmed } }));
+      toast.success('Status updated');
+    } catch (e) {
+      console.warn('Failed to persist status:', e);
+    }
     setShowStatusDialog(false);
   }, [roomId, customStatus]);
 
@@ -183,20 +203,25 @@ export function MembersList({ roomId }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className={cn(
-                    "text-[14px] font-semibold truncate leading-tight",
+                    "text-[14px] font-semibold truncate leading-tight flex items-center gap-1.5",
                     member.isOnline ? "text-white" : "text-[#A1A3AB]"
                   )}>
-                    {member.displayName}
-                    {user?.uid && member.userId === user.uid && ' (You)'}
+                    <span className="truncate">{member.displayName}</span>
+                    {member.username && (
+                      <span className="text-[11px] text-[#A1A3AB]/60 font-normal shrink-0">@{member.username}</span>
+                    )}
+                    {user?.uid && member.userId === user.uid && <span className="text-[11px] text-primary font-bold shrink-0">(You)</span>}
                   </p>
-                  {(member).status && (
-                    <p className="text-[11px] text-[#A1A3AB] truncate leading-tight mt-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                      {(member).status}
+                  {member.status ? (
+                    <p className="text-[11.5px] text-[#10B981] truncate leading-tight mt-0.5 font-medium opacity-90 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] inline-block shrink-0" />
+                      <span className="truncate">{member.status}</span>
+                    </p>
+                  ) : (
+                    <p className="text-[12px] text-[#6F7483] truncate leading-tight mt-0.5 font-medium">
+                      {member.isOnline ? 'Online' : 'Offline'}
                     </p>
                   )}
-                  <p className="text-[12px] text-[#6F7483] truncate leading-tight mt-0.5 font-medium">
-                    {member.isOnline ? 'Online' : 'Offline'}
-                  </p>
                 </div>
               </motion.div>
             ))
