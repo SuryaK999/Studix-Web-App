@@ -19,6 +19,7 @@ import { logger } from '@/lib/logger';
 import { toast } from 'sonner';
 import { PlaceholdersAndVanishInput } from '@/components/ui/placeholders-and-vanish-input';
 import { fetchMessages } from '@/services/api';
+import { callGroqApi, isGroqConfigured } from '@/services/aiService';
 
 const QUICK_ACTIONS = [
   { icon: BookOpen, label: 'Explain', prompt: 'Explain this topic in simple terms with examples.' },
@@ -74,12 +75,30 @@ function MarkdownContent({ content }) {
 }
 
 // ─── Expert Response Generator ──────────────────────────────────
-function generateExpertResponse(
+async function generateExpertResponse(
   userInput,
   roomContext,
   messageHistory,
   signal
 ) {
+  // If Groq API key is configured, query Groq for live LLM reasoning
+  if (isGroqConfigured()) {
+    try {
+      const groqAnswer = await callGroqApi({
+        prompt: userInput,
+        context: roomContext,
+        history: messageHistory,
+        signal
+      });
+      if (groqAnswer) return groqAnswer;
+    } catch (err) {
+      if (err.name === 'AbortError' || signal?.aborted) {
+        throw new DOMException('AI request aborted', 'AbortError');
+      }
+      console.warn('[AiStudyBuddy] Groq call failed, falling back to local tutor:', err.message);
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const delay = 600 + Math.random() * 600;
     const timer = setTimeout(() => {

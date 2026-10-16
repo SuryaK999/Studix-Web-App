@@ -6,6 +6,68 @@
 
 // Production guards
 const MAX_INPUT_LENGTH = 3000;
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+export function isGroqConfigured() {
+  const key = import.meta.env.VITE_GROQ_API_KEY;
+  return Boolean(key && key.trim() && !key.includes('your_groq_api_key'));
+}
+
+export async function callGroqApi({ prompt, context = '', history = [], signal = null }) {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey || !apiKey.trim() || apiKey.includes('your_groq_api_key')) {
+    return null;
+  }
+
+  const model = import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile';
+
+  const systemMessage = {
+    role: 'system',
+    content: `You are StudyBuddy AI, an empathetic, highly knowledgeable, and patient academic tutor on Studix (a real-time collaborative study platform).
+Guidelines:
+- Explain ideas clearly with step-by-step breakdowns, intuitive analogies, and code/math examples where relevant.
+- Format responses cleanly with GitHub-flavored markdown (bullet points, bold highlights, code blocks with syntax names, headers).
+- Keep responses focused, encouraging, and easy for students to read.
+${context ? `\nRoom Context from Peers:\n${context}` : ''}`
+  };
+
+  const formattedHistory = (history || [])
+    .filter(m => (m.content || m.text))
+    .slice(-8)
+    .map(m => ({
+      role: m.role === 'assistant' ? 'assistant' : 'user',
+      content: String(m.content || m.text).slice(0, 1500)
+    }));
+
+  const messages = [
+    systemMessage,
+    ...formattedHistory,
+    { role: 'user', content: String(prompt).slice(0, 3000) }
+  ];
+
+  const res = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey.trim()}`,
+      'Content-Type': 'application/json'
+    },
+    signal,
+    body: JSON.stringify({
+      model,
+      messages,
+      temperature: 0.7,
+      max_tokens: 1500
+    })
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Groq API error ${res.status}: ${errorText}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || null;
+}
 
 export function sanitizeAiInput(input) {
   if (!input) return '';
@@ -91,6 +153,20 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
     .slice(-6)
     .map(m => `${m.senderName}: ${m.text}`)
     .join(' | ');
+
+  // If Groq API is configured, use high-speed Llama 3.3 for intelligent contextual answer
+  if (isGroqConfigured()) {
+    try {
+      const groqAnswer = await callGroqApi({
+        prompt: cleanInput,
+        context: contextSnippet,
+        signal: options?.signal
+      });
+      if (groqAnswer) return groqAnswer;
+    } catch (err) {
+      console.warn('[AI Service] Groq response error, falling back to local template:', err.message);
+    }
+  }
 
   // 1. Direct Summarization Request
   if (lower.includes('summarize') || lower.includes('summary') || lower.includes('recap')) {
