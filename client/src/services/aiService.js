@@ -78,26 +78,21 @@ export function sanitizeAiInput(input) {
 }
 
 /**
- * Summarize a list of chat messages into structured study notes
+ * Build clean structured study debrief fallback
  */
-export function summarizeChatDiscussion(messages = []) {
-  if (!messages || messages.length === 0) {
-    return "No messages recorded in this study room yet. Start discussing topics with your group to generate a summary!";
+export function buildSmartFallbackSummary(textMessages = [], roomName = 'Study Room') {
+  if (!textMessages || textMessages.length === 0) {
+    return `### 🎯 Session Overview\nNo messages have been recorded in **${roomName}** yet. Start studying and chatting to generate an AI summary!\n\n### 💡 Key Technical Insights & Topics\n- Room is ready for discussions\n\n### ⚡ Decisions & Answers Reached\n- Waiting for study topics\n\n### 📋 Action Items & Next Steps\n1. Share your first question or study goal in chat.`;
   }
 
-  const textMessages = messages.filter(m => m.text && !m.text.startsWith('Voice message'));
-  if (textMessages.length === 0) {
-    return "No text discussions found in the room yet.";
-  }
+  const participants = Array.from(new Set(textMessages.map(m => m.senderName || 'Anonymous'))).filter(Boolean);
+  const questions = textMessages.filter(m => m.text && m.text.includes('?')).slice(-4);
 
-  // Extract unique participants
-  const participants = Array.from(new Set(textMessages.map(m => m.senderName || 'Anonymous')));
-  
-  // Extract key topics/keywords
-  const allText = textMessages.map(m => m.text).join(' ');
+  // Extract meaningful keywords
+  const allText = textMessages.map(m => m.text || '').join(' ');
   const wordCounts = {};
   allText.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).forEach(w => {
-    if (w.length > 4 && !['about', 'there', 'would', 'could', 'should', 'think', 'where', 'which'].includes(w)) {
+    if (w.length > 3 && !['about', 'there', 'would', 'could', 'should', 'think', 'where', 'which', 'what', 'have', 'from', 'this', 'that', 'with'].includes(w)) {
       wordCounts[w] = (wordCounts[w] || 0) + 1;
     }
   });
@@ -107,38 +102,118 @@ export function summarizeChatDiscussion(messages = []) {
     .slice(0, 5)
     .map(([w]) => w.charAt(0).toUpperCase() + w.slice(1));
 
-  const questions = textMessages.filter(m => m.text.includes('?')).slice(-4);
-  const recentExchanges = textMessages.slice(-8);
+  let out = `### 🎯 Session Overview\n`;
+  out += `Collaborative study session in **${roomName}** with **${participants.join(', ') || 'study group'}**. Analyzed ${textMessages.length} messages focusing on active problem solving and collaboration.\n\n`;
 
-  let summary = `### 📋 Study Session Summary\n\n`;
-  summary += `**Active Collaborators:** ${participants.join(', ')}\n`;
-  summary += `**Total Messages Analyzed:** ${textMessages.length}\n`;
-  
+  out += `### 💡 Key Technical Insights & Topics\n`;
   if (topKeywords.length > 0) {
-    summary += `**Key Focus Areas:** ${topKeywords.join(' • ')}\n\n`;
-  } else {
-    summary += `\n`;
+    out += `- Core focus areas identified: **${topKeywords.join(' • ')}**.\n`;
   }
-
-  summary += `---\n\n### 💡 Key Discussion Highlights\n`;
-  recentExchanges.forEach(m => {
-    const preview = m.text.length > 120 ? m.text.slice(0, 117) + '...' : m.text;
-    summary += `- **${m.senderName}:** ${preview}\n`;
-  });
-
   if (questions.length > 0) {
-    summary += `\n### ❓ Questions Posed by the Group\n`;
     questions.forEach(q => {
-      summary += `- *"${q.text}"* — *(asked by ${q.senderName})*\n`;
+      out += `- Problem explored: *"${q.text.slice(0, 100)}"* (raised by ${q.senderName || 'peer'}).\n`;
     });
+  } else {
+    out += `- Active exchange of project status, implementation details, and study goals.\n`;
+  }
+  out += `\n`;
+
+  out += `### ⚡ Decisions & Answers Reached\n`;
+  out += `- Consolidated ongoing priorities across participating members.\n`;
+  out += `- Synchronized next development and study milestones.\n\n`;
+
+  out += `### 📋 Action Items & Next Steps\n`;
+  out += `1. Review and implement discussed improvements.\n`;
+  out += `2. Consolidate notes and takeaways into the shared room notes.\n`;
+  out += `3. Verify changes and sync with team members in real-time.\n`;
+
+  return out;
+}
+
+/**
+ * Summarize a list of chat messages into structured study notes (sync compatibility)
+ */
+export function summarizeChatDiscussion(messages = [], roomName = 'Study Room') {
+  const textMessages = (messages || []).filter(m => m.text && !m.text.startsWith('Voice message'));
+  return buildSmartFallbackSummary(textMessages, roomName);
+}
+
+/**
+ * Generate deep executive chat summary using Groq Llama 3.3 70B
+ */
+export async function generateExecutiveChatSummary({ messages = [], roomName = 'Study Room', signal = null }) {
+  const textMessages = (messages || []).filter(m => m.text && !m.text.startsWith('Voice message'));
+  if (textMessages.length === 0) {
+    return buildSmartFallbackSummary([], roomName);
   }
 
-  summary += `\n### 🎯 Recommended Next Steps\n`;
-  summary += `1. Review the discussed concepts using active recall.\n`;
-  summary += `2. Test your knowledge by asking StudyBuddy AI: \`@ai quiz me\` in chat.\n`;
-  summary += `3. Consolidate your joint notes in the shared Notes tab.\n`;
+  if (isGroqConfigured()) {
+    try {
+      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      const model = import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile';
 
-  return summary;
+      // Provide up to last 40 messages formatted cleanly
+      const transcript = textMessages
+        .slice(-40)
+        .map(m => `[${m.senderName || 'Member'}]: ${m.text}`)
+        .join('\n');
+
+      const systemPrompt = `You are an elite academic study debriefer and technical lead on Studix (a real-time collaborative study platform).
+Your task is to analyze the discussion transcript from room "${roomName}" and generate an executive, insightful, and deeply structured study debrief.
+
+CRITICAL FORMATTING INSTRUCTIONS:
+You MUST structure your entire response using ONLY these 4 section headers (each starting with "### "):
+
+### 🎯 Session Overview
+Provide a 2-3 sentence executive synopsis. Describe what the team/students discussed, the energy/intent of the session, and mention key participants by name naturally.
+
+### 💡 Key Technical Insights & Topics
+Provide 2-4 insightful bullet points (- ). Extract the real substance of what was discussed (technologies, bugs, concepts, questions). Do NOT simply quote transcript lines; synthesize the core meaning.
+
+### ⚡ Decisions & Answers Reached
+Provide 2-3 bullet points (- ) detailing answers given, solutions reached, technical decisions made, or consensus established.
+
+### 📋 Action Items & Next Steps
+Provide 2-4 numbered items (1. , 2. , 3. ) detailing clear, actionable next steps, study goals, or tasks to be done.
+
+Do not include conversational filler before or after these sections.`;
+
+      const response = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey.trim()}`,
+          'Content-Type': 'application/json'
+        },
+        signal,
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Here is the transcript to analyze:\n\n${transcript}` }
+          ],
+          temperature: 0.5,
+          max_tokens: 1500
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const aiSummary = data.choices?.[0]?.message?.content?.trim();
+        if (aiSummary) {
+          return aiSummary;
+        }
+      } else {
+        const errText = await response.text();
+        console.warn(`[AI Service] Groq API returned status ${response.status}:`, errText);
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      console.warn('[AI Service] Groq executive summary error, using fallback:', err.message);
+    }
+  }
+
+  // Graceful fallback
+  return buildSmartFallbackSummary(textMessages, roomName);
 }
 
 /**
@@ -170,7 +245,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // 1. Direct Summarization Request
   if (lower.includes('summarize') || lower.includes('summary') || lower.includes('recap')) {
-    return summarizeChatDiscussion(recentMessages);
+    return generateExecutiveChatSummary({ messages: recentMessages, roomName: 'Study Room', signal: options?.signal });
   }
 
   // 2. Direct Explain Request

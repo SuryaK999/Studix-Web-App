@@ -20,7 +20,8 @@ import { saveVoice } from '@/services/voiceStorageService';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
 import { fetchMessages, deleteMessageApi } from '@/services/api';
-import { summarizeChatDiscussion, generateAiStudyResponse } from '@/services/aiService';
+import { summarizeChatDiscussion, generateAiStudyResponse, generateExecutiveChatSummary } from '@/services/aiService';
+import { ChatSummaryModal } from './ChatSummaryModal';
 import { differenceInMinutes } from 'date-fns';
 
 const PAGE_SIZE = 50;
@@ -540,14 +541,18 @@ export function ChatPanel({ roomId, roomData }) {
     setIsSummarizing(true);
     setShowSummaryModal(true);
     try {
-      const summaryResult = summarizeChatDiscussion(messages);
+      const summaryResult = await generateExecutiveChatSummary({
+        messages,
+        roomName
+      });
       setSummary(summaryResult);
-    } catch {
-      setSummary("Unable to summarize discussion at this time.");
+    } catch (err) {
+      console.error('[ChatPanel] Failed to generate AI summary:', err);
+      setSummary("Unable to synthesize discussion at this time. Please check your network and try again.");
     } finally {
       setIsSummarizing(false);
     }
-  }, [messages]);
+  }, [messages, roomName]);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
@@ -681,11 +686,11 @@ export function ChatPanel({ roomId, roomData }) {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { setShowSummaryModal(true); generateSummary(); }}
-            className="h-8 px-3.5 rounded-lg text-primary hover:text-white hover:bg-primary/20 text-[11px] font-black uppercase tracking-wide border border-primary/20 gap-1.5 transition-all duration-200"
+            onClick={generateSummary}
+            className="h-8 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-white text-[11px] font-bold tracking-wide border border-purple-500/30 gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.15)] hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all duration-200"
           >
-            <Zap className="h-3 w-3" />
-            AI Summary
+            <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
+            AI Executive Summary
           </Button>
         </div>
       </header>
@@ -898,54 +903,20 @@ export function ChatPanel({ roomId, roomData }) {
           </div>
       </form>
 
-      <Dialog open={showSummaryModal} onOpenChange={setShowSummaryModal}>
-        <DialogContent className="sm:max-w-lg border-border shadow-2xl bg-background/95 backdrop-blur-xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Chat Summary
-            </DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            {isSummarizing ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-white/5 border border-white/10 text-[#E8EAF0] rounded-xl p-4 max-h-96 overflow-y-auto">
-                  <p className="text-[13.5px] leading-relaxed whitespace-pre-wrap font-sans">{summary}</p>
-                </div>
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-white/10 text-white/70 hover:text-white"
-                    onClick={() => {
-                      navigator.clipboard.writeText(summary);
-                      toast.success('Summary copied to clipboard');
-                    }}
-                  >
-                    Copy
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-primary hover:bg-primary/90 text-white gap-1.5"
-                    onClick={() => {
-                      sendMessage(summary);
-                      setShowSummaryModal(false);
-                      toast.success('Shared summary to room chat');
-                    }}
-                  >
-                    <Send size={13} />
-                    Post to Room Chat
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ChatSummaryModal
+        open={showSummaryModal}
+        onOpenChange={setShowSummaryModal}
+        summary={summary}
+        isSummarizing={isSummarizing}
+        onRegenerate={generateSummary}
+        onPostToChat={(text) => {
+          sendMessage(text);
+          setShowSummaryModal(false);
+          toast.success('Shared executive summary to room chat');
+        }}
+        roomName={roomName}
+        messageCount={messages.length}
+      />
     </div>
   );
 }
