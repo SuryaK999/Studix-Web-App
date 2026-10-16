@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { usePresence } from '@/hooks/usePresence';
@@ -25,7 +25,6 @@ import { fetchUserRooms, fetchRoomData, leaveRoom } from '@/services/api';
 import { socketService } from '@/lib/socket';
 import { useNavigate } from 'react-router-dom';
 import { useInvisibleScroll } from '@/hooks/useInvisibleScroll';
-import { useRef } from 'react';
 import { addRecentRoom } from '@/utils/recentRooms';
 
 const NotesEditor = lazy(() => import('@/components/notes/NotesEditor').then(m => ({ default: m.NotesEditor })));
