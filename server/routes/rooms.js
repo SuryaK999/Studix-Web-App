@@ -215,12 +215,24 @@ router.post('/:id/leave', async (req, res) => {
   try {
     const { id } = req.params;
     const uid = req.user.uid;
+    const mongoose = require('mongoose');
+    const isValidId = mongoose.Types.ObjectId.isValid(id);
+    const room = isValidId ? await Room.findById(id) : await Room.findOne({ inviteCode: id });
+    const resolvedId = room ? room._id.toString() : id;
 
-    await Membership.deleteOne({ roomId: id, userId: uid });
+    await Membership.deleteMany({
+      $or: [
+        { roomId: resolvedId, userId: uid },
+        { roomId: id, userId: uid }
+      ]
+    });
 
     const io = req.app.get('io');
     if (io) {
-      io.to(id).emit('presence:left', { userId: uid });
+      io.to(resolvedId).emit('presence:left', { userId: uid });
+      if (resolvedId !== id) {
+        io.to(id).emit('presence:left', { userId: uid });
+      }
     }
 
     res.json({ success: true, message: 'Successfully left room' });

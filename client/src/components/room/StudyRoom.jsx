@@ -11,7 +11,9 @@ import {
   Settings, Plus, Bot, 
   BookOpen, Mic, Hash, LogOut,
   PanelLeftClose, PanelRightClose, PanelLeft, PanelRight,
+  Loader2, Search, Compass, Sparkles, Check, ArrowRight,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,18 +91,33 @@ function StudyRoomContent({ roomId, onLeave }) {
   const { activeTheme } = useStudyRoomTheme();
 
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
   const [showSwitchModal, setShowSwitchModal] = useState(false);
-  const [pendingSwitchRoomId, setPendingSwitchRoomId] = useState(null);
+  const [switchSearchQuery, setSwitchSearchQuery] = useState('');
   const [showChannelModal, setShowChannelModal] = useState(false);
   const [newChannelName, setNewChannelName] = useState('');
   const [customChannels, setCustomChannels] = useState([]);
 
-  const handleRoomSwitchClick = (targetRoomId, isActive) => {
+  const filteredRooms = useMemo(() => {
+    if (!switchSearchQuery.trim()) return rooms;
+    const q = switchSearchQuery.toLowerCase();
+    return rooms.filter(r => (r.name || '').toLowerCase().includes(q));
+  }, [rooms, switchSearchQuery]);
+
+  const handleRoomSwitchClick = async (targetRoomId, isActive) => {
     if (isActive || !targetRoomId) return;
+    try {
+      const socket = await socketService.connect();
+      socket.emit('room:leave', { roomId });
+    } catch (_) {}
+    localStorage.setItem('studix_last_room', targetRoomId);
+    setShowSwitchModal(false);
     navigate(`/room/${targetRoomId}`);
+    toast.success('Switched study room');
   };
 
   const handleLeaveRoom = async () => {
+    setIsLeaving(true);
     try {
       await leaveRoom(roomId);
     } catch (err) {
@@ -110,20 +127,18 @@ function StudyRoomContent({ roomId, onLeave }) {
       const socket = await socketService.connect();
       socket.emit('room:leave', { roomId });
     } catch (_) {}
+
+    // Clean stored room pointers so it doesn't linger
+    localStorage.removeItem('studix_last_room');
+    localStorage.removeItem(`studix_room_tab_${roomId}`);
+
     window.dispatchEvent(new Event('roomsUpdated'));
+    toast.success('Successfully left the study room');
+    setIsLeaving(false);
     setShowLeaveModal(false);
+
     if (onLeave) onLeave();
     else navigate('/');
-  };
-
-  const handleConfirmSwitch = () => {
-    setShowSwitchModal(false);
-    if (pendingSwitchRoomId) {
-      navigate(`/room/${pendingSwitchRoomId}`);
-    } else {
-      if (onLeave) onLeave();
-      else navigate('/');
-    }
   };
 
   const [leftWidth, setLeftWidth] = useState(240);
@@ -291,7 +306,15 @@ function StudyRoomContent({ roomId, onLeave }) {
           })}
         </div>
 
-        <div className="mt-auto px-4 pb-2">
+        <div className="mt-auto px-4 pb-2 flex flex-col items-center gap-2">
+           <button 
+             onClick={() => setShowSwitchModal(true)}
+             className="w-12 h-12 rounded-[24px] bg-[#16171F] flex items-center justify-center text-[#A1A3AB] hover:text-white hover:rounded-[16px] hover:bg-white/10 transition-all duration-200"
+             title="Switch or Browse Rooms"
+           >
+             <Compass className="w-5 h-5" />
+           </button>
+
            <button 
              onClick={() => setShowLeaveModal(true)}
              className="w-12 h-12 rounded-[24px] bg-[#16171F] flex items-center justify-center text-[#F43F5E] hover:rounded-[16px] hover:bg-[#F43F5E]/10 transition-all duration-200 group"
@@ -540,38 +563,132 @@ function StudyRoomContent({ roomId, onLeave }) {
         roomId={roomId}
       />
 
-      <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
-        <DialogContent className="bg-[#0e0f14] border-white/5 shadow-2xl">
+      <Dialog open={showLeaveModal} onOpenChange={isLeaving ? undefined : setShowLeaveModal}>
+        <DialogContent className="bg-[#0e0f14] border-white/10 text-white shadow-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">Leave Study Room?</DialogTitle>
-            <DialogDescription className="text-[#A1A3AB]">
-              Are you sure you want to leave {currentRoom?.name}? You will return to the lobby.
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <LogOut className="w-5 h-5 text-rose-500" />
+              Leave Study Room?
+            </DialogTitle>
+            <DialogDescription className="text-[#A1A3AB] text-xs pt-1">
+              Are you sure you want to leave <strong className="text-white">{currentRoom?.name}</strong>? You will be removed from active membership and returned to the lobby.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-6 flex items-center gap-3">
-            <Button variant="ghost" onClick={() => setShowLeaveModal(false)} className="text-[#A1A3AB] hover:text-white hover:bg-white/5">Cancel</Button>
-            <Button variant="destructive" onClick={handleLeaveRoom} className="bg-[#F43F5E] hover:bg-[#E11D48] text-white">Leave Room</Button>
+            <Button variant="ghost" disabled={isLeaving} onClick={() => setShowLeaveModal(false)} className="text-[#A1A3AB] hover:text-white hover:bg-white/5">
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              disabled={isLeaving} 
+              onClick={handleLeaveRoom} 
+              className="bg-[#F43F5E] hover:bg-[#E11D48] text-white font-bold gap-2"
+            >
+              {isLeaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              {isLeaving ? 'Leaving Room...' : 'Leave Room'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={showSwitchModal} onOpenChange={setShowSwitchModal}>
-        <DialogContent className="bg-[#0e0f14] border-white/5 shadow-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">Switch Room?</DialogTitle>
-            <DialogDescription className="text-[#A1A3AB]">
-              You are about to switch to another study room. Proceed?
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-6 flex items-center gap-3">
-            <Button variant="ghost" onClick={() => setShowSwitchModal(false)} className="text-[#A1A3AB] hover:text-white hover:bg-white/5">Cancel</Button>
-            <Button 
-               className="bg-primary hover:bg-primary/90 text-white"
-               onClick={handleConfirmSwitch}
+        <DialogContent className="sm:max-w-md bg-[#0e0f14]/95 border-white/10 text-white shadow-2xl backdrop-blur-2xl rounded-2xl p-0 overflow-hidden">
+          <div className="p-5 border-b border-white/[0.08] bg-gradient-to-r from-purple-950/30 to-transparent">
+            <DialogHeader>
+              <div className="flex items-center gap-2">
+                <Compass className="w-5 h-5 text-purple-400" />
+                <DialogTitle className="text-lg font-black text-white">Switch Study Room</DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-white/50 pt-1">
+                Jump instantly to any of your joined rooms or explore new spaces.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-3 relative">
+              <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                placeholder="Search your rooms..."
+                value={switchSearchQuery}
+                onChange={(e) => setSwitchSearchQuery(e.target.value)}
+                className="pl-9 bg-white/[0.04] border-white/10 text-white placeholder:text-white/30 text-xs rounded-xl focus-visible:ring-purple-500/50"
+              />
+            </div>
+          </div>
+
+          <div className="max-h-72 overflow-y-auto p-3 space-y-1 custom-scrollbar">
+            {filteredRooms.length === 0 ? (
+              <div className="py-8 text-center text-xs text-white/40">
+                No rooms matching "{switchSearchQuery}"
+              </div>
+            ) : (
+              filteredRooms.map((room) => {
+                const rId = room.id || room._id?.toString();
+                const isActive = String(rId) === String(roomId);
+
+                return (
+                  <button
+                    key={rId}
+                    type="button"
+                    onClick={() => handleRoomSwitchClick(rId, isActive)}
+                    className={cn(
+                      "w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all duration-150 group",
+                      isActive
+                        ? "bg-purple-600/15 border border-purple-500/30 text-white cursor-default"
+                        : "hover:bg-white/[0.06] text-white/80 hover:text-white"
+                    )}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn(
+                        "w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden",
+                        isActive ? "bg-purple-600 text-white" : "bg-[#1f2029] text-white/70 group-hover:bg-purple-600/30 group-hover:text-purple-300"
+                      )}>
+                        {room.avatarUrl ? (
+                          <img src={room.avatarUrl} alt={room.name} className="w-full h-full object-cover" />
+                        ) : (
+                          room.name ? room.name[0].toUpperCase() : '#'
+                        )}
+                      </div>
+                      <div className="min-w-0 flex flex-col">
+                        <span className="font-bold text-sm tracking-tight truncate">{room.name}</span>
+                        <span className="text-[11px] text-white/40 truncate">
+                          {room.members?.length || 1} members
+                        </span>
+                      </div>
+                    </div>
+
+                    {isActive ? (
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[10px] font-bold border border-emerald-500/30 shrink-0">
+                        Current
+                      </span>
+                    ) : (
+                      <ArrowRight className="w-4 h-4 text-white/30 group-hover:text-purple-400 group-hover:translate-x-0.5 transition-all shrink-0" />
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <div className="p-3 border-t border-white/[0.08] bg-[#090a10] flex items-center justify-between">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => { setShowSwitchModal(false); navigate('/rooms'); }}
+              className="text-xs text-white/60 hover:text-white hover:bg-white/5"
             >
-              Switch Room
+              All Public Rooms
             </Button>
-          </DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSwitchModal(false)}
+              className="border-white/10 text-xs text-white hover:bg-white/5"
+            >
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

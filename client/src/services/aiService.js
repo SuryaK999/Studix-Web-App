@@ -13,13 +13,74 @@ export function isGroqConfigured() {
   return Boolean(key && key.trim() && !key.includes('your_groq_api_key'));
 }
 
-export async function callGroqApi({ prompt, context = '', history = [], signal = null }) {
+/**
+ * Execute chat completion with automatic model fallback across available Groq LLMs
+ */
+export async function executeGroqChatCompletion({ messages, temperature = 0.6, max_tokens = 1500, signal = null }) {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey || !apiKey.trim() || apiKey.includes('your_groq_api_key')) {
     return null;
   }
 
-  const model = import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile';
+  const configuredModel = import.meta.env.VITE_GROQ_MODEL;
+  const candidateModels = Array.from(new Set([
+    configuredModel,
+    'openai/gpt-oss-120b',
+    'qwen/qwen3.8-27b',
+    'openai/gpt-oss-20b',
+    'llama-3.3-70b-versatile'
+  ].filter(Boolean)));
+
+  let lastError = null;
+  for (const model of candidateModels) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    try {
+      const res = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey.trim()}`,
+          'Content-Type': 'application/json'
+        },
+        signal,
+        body: JSON.stringify({
+          model,
+          messages,
+          temperature,
+          max_tokens
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        let content = data.choices?.[0]?.message?.content?.trim();
+        if (content) {
+          content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+          return content;
+        }
+      } else {
+        const errText = await res.text();
+        console.warn(`[Groq] Model ${model} returned HTTP ${res.status}:`, errText);
+        lastError = new Error(`Groq ${model} status ${res.status}: ${errText}`);
+        if (res.status === 404 || errText.includes('model_not_found') || errText.includes('does not exist')) {
+          continue;
+        }
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      lastError = err;
+      console.warn(`[Groq] Model ${model} error:`, err.message);
+    }
+  }
+
+  if (lastError) throw lastError;
+  return null;
+}
+
+export async function callGroqApi({ prompt, context = '', history = [], signal = null }) {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey || !apiKey.trim() || apiKey.includes('your_groq_api_key')) {
+    return null;
+  }
 
   const systemMessage = {
     role: 'system',
@@ -45,28 +106,12 @@ ${context ? `\nRoom Context from Peers:\n${context}` : ''}`
     { role: 'user', content: String(prompt).slice(0, 3000) }
   ];
 
-  const res = await fetch(GROQ_API_URL, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey.trim()}`,
-      'Content-Type': 'application/json'
-    },
-    signal,
-    body: JSON.stringify({
-      model,
-      messages,
-      temperature: 0.7,
-      max_tokens: 1500
-    })
+  return executeGroqChatCompletion({
+    messages,
+    temperature: 0.6,
+    max_tokens: 1500,
+    signal
   });
-
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Groq API error ${res.status}: ${errorText}`);
-  }
-
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content?.trim() || null;
 }
 
 export function sanitizeAiInput(input) {
@@ -178,33 +223,18 @@ Provide 2-4 numbered items (1. , 2. , 3. ) detailing clear, actionable next step
 
 Do not include conversational filler before or after these sections.`;
 
-      const response = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey.trim()}`,
-          'Content-Type': 'application/json'
-        },
-        signal,
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Here is the transcript to analyze:\n\n${transcript}` }
-          ],
-          temperature: 0.5,
-          max_tokens: 1500
-        })
+      const aiSummary = await executeGroqChatCompletion({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Here is the transcript to analyze:\n\n${transcript}` }
+        ],
+        temperature: 0.5,
+        max_tokens: 1500,
+        signal
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        const aiSummary = data.choices?.[0]?.message?.content?.trim();
-        if (aiSummary) {
-          return aiSummary;
-        }
-      } else {
-        const errText = await response.text();
-        console.warn(`[AI Service] Groq API returned status ${response.status}:`, errText);
+      if (aiSummary) {
+        return aiSummary;
       }
     } catch (err) {
       if (err.name === 'AbortError') throw err;

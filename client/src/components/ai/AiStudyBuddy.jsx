@@ -392,9 +392,17 @@ export function AiStudyBuddy({ roomId }) {
             <h3 className="font-semibold text-white text-sm md:text-base lg:text-lg tracking-tight whitespace-nowrap">
               StudyBuddy AI
             </h3>
-            <span className="inline-block w-fit px-1.5 py-0.5 text-[8px] md:text-[9px] lg:text-[10px] font-bold text-[#c084fc] border border-[#c084fc]/30 rounded-full tracking-wider uppercase">
-              EXPERT
-            </span>
+            {isGroqConfigured() ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[9px] md:text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full tracking-wider uppercase shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <Zap className="w-3 h-3 text-emerald-400" />
+                GROQ AI • LIVE
+              </span>
+            ) : (
+              <span className="inline-block w-fit px-1.5 py-0.5 text-[8px] md:text-[9px] lg:text-[10px] font-bold text-[#c084fc] border border-[#c084fc]/30 rounded-full tracking-wider uppercase">
+                OFFLINE TUTOR
+              </span>
+            )}
           </div>
         </div>
 
