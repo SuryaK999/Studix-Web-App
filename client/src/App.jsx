@@ -367,12 +367,18 @@ function App() {
         
         if (ctx === 'message') {
           const isOwn = el.getAttribute('data-message-own') === '1';
+          const canDelete = isOwn || el.getAttribute('data-message-can-delete') === '1';
           return {
-            items: MESSAGE_MENU_ITEMS.filter(item => (item.id === 'msg-edit' || item.id === 'msg-delete') ? isOwn : true),
+            items: MESSAGE_MENU_ITEMS.filter(item => {
+              if (item.id === 'msg-edit') return isOwn;
+              if (item.id === 'msg-delete') return canDelete;
+              return true;
+            }),
             context: { 
               type: 'message', 
               element: el, 
               isOwn, 
+              canDelete,
               messageId: el.getAttribute('data-message-id'),
               text: el.getAttribute('data-radial-text')
             }

@@ -335,8 +335,9 @@ export const MessageItem = memo(function MessageItem({
         isLastInGroup && "mb-2"
       )}
       data-radial-context="message"
-      data-message-id={message.id}
+      data-message-id={message.id || message.tempId}
       data-message-own={isOwn ? '1' : '0'}
+      data-message-can-delete={(canDelete || isOwn) ? '1' : '0'}
       data-radial-text={message.text || (message.type === 'voice' ? 'Voice Message' : message.fileName ? `File: ${message.fileName}` : '')}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
