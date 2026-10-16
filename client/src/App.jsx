@@ -6,7 +6,7 @@ import { SignUpForm } from '@/components/auth/SignUpForm';
 import GradientBlinds from '@/components/ui/GradientBlinds';
 import Lightning from '@/components/ui/Lightning';
 import { 
-  BookOpen, Copy, ClipboardPaste, Trash2, 
+  Copy, ClipboardPaste, Trash2, 
   Edit2, SmilePlus, PhoneCall, Settings, Search, FilePlus, ChevronDown, CheckCheck,
   Bold, Italic, List, Table, Image, HelpCircle, Bot, Zap, LogIn, Reply, RefreshCw
 } from 'lucide-react';
@@ -105,7 +105,6 @@ function AppContent() {
           <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/10 blur-[120px]" />
         </div>
 
-        {}
         <motion.div 
           className="absolute inset-0 flex flex-col lg:flex-row w-full h-full z-10"
           initial={false}
@@ -114,7 +113,6 @@ function AppContent() {
           }}
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         >
-          {}
           <motion.div 
             layout
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}

@@ -245,7 +245,6 @@ export const MessageItem = memo(function MessageItem({
 
     return (
       <div className="space-y-2">
-        {}
         {message.replyTo && (
           <div className={cn(
             "flex items-center gap-2 px-2.5 py-1.5 rounded-lg border-l-2 mb-1 min-w-[120px] max-w-full",
@@ -298,7 +297,6 @@ export const MessageItem = memo(function MessageItem({
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      {}
       <div className="w-9 h-9 flex-shrink-0 relative">
         {isFirstInGroup && !isOwn && (
           <Avatar className="h-9 w-9 shadow-md border border-white/[0.08] animate-in zoom-in-50 duration-300 shrink-0">
@@ -311,7 +309,6 @@ export const MessageItem = memo(function MessageItem({
       </div>
 
       <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
-        {}
         {isFirstInGroup && !isOwn && (
           <div className="flex items-center gap-2 mb-1 ml-1 scale-in-center overflow-hidden">
             <span className="text-[12.5px] font-extrabold text-[#B4A0FF] capitalize tracking-tight truncate max-w-[120px]">
@@ -342,7 +339,6 @@ export const MessageItem = memo(function MessageItem({
               !isFirstInGroup && "rounded-[1.2rem]"
             )}
           >
-            {}
             {isFirstInGroup && (
               <div
                 className={cn(
@@ -357,7 +353,6 @@ export const MessageItem = memo(function MessageItem({
             <div className="relative z-10 pb-1.5 break-words overflow-hidden">
               {renderContent()}
               
-              {}
               {!isEditing && (
                 <div className={cn(
                   "flex items-center gap-0.5 absolute bottom-0 right-[-4px]",
@@ -381,7 +376,6 @@ export const MessageItem = memo(function MessageItem({
 
             </div>
 
-            {}
             {!isEditing && showActions && (
               <button
                 data-reaction-trigger="1"
@@ -402,7 +396,6 @@ export const MessageItem = memo(function MessageItem({
 
         </div>
 
-        {}
         <div className="mt-1">
           <MessageReactions 
             messageId={message.id} 

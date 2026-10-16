@@ -343,21 +343,26 @@ cd ../..
 ### 3. Setup Environment Variables
 ```bash
 # Frontend configuration
-cp app/.env.example app/.env
+cp client/.env.example client/.env
 
 # Backend configuration
-cp app/server/.env.example app/server/.env
+cp server/.env.example server/.env
 ```
 
 ### 4. Run Locally in Development Mode
 
 ```bash
+# Option A: From root directory using monorepo commands
+npm run dev:server    # Terminal 1 — Start Backend Server (Port 4000)
+npm run dev:client    # Terminal 2 — Start Frontend Vite Server (Port 5173)
+
+# Option B: From individual directories
 # Terminal 1 — Start the Backend Server (Port 4000)
-cd app/server
+cd server
 npm run dev
 
 # Terminal 2 — Start the Frontend Vite Server (Port 5173)
-cd app
+cd client
 npm run dev
 ```
 
@@ -376,7 +381,7 @@ version: '3.8'
 services:
   backend:
     build:
-      context: ./app/server
+      context: ./server
       dockerfile: Dockerfile
     ports:
       - "4000:4000"
@@ -391,7 +396,7 @@ services:
 
   frontend:
     build:
-      context: ./app
+      context: ./client
       dockerfile: Dockerfile
     ports:
       - "5173:5173"
@@ -428,14 +433,18 @@ docker compose up --build -d
 studix/
 ├── 📄 README.md                        # Master documentation
 ├── 📄 .gitignore                       # Repository ignore rules
+├── 📄 package.json                     # Monorepo workspace root commands
+├── 📄 render.yaml                      # Render Blueprint deployment config
+├── 📄 vercel.json                      # Vercel monorepo deployment config
 ├── 📄 firebase-rules.md                # Production Firestore security rules
 ├── 📄 docker-compose.yml               # Container orchestration
 │
-├── 📂 app/                             # Frontend React 19 Client
+├── 📂 client/                          # Frontend React 19 Client (Vite)
 │   ├── 📄 index.html                   # HTML entry point with preload tags
 │   ├── 📄 package.json                 # Frontend dependencies
 │   ├── 📄 vite.config.js               # Vite build optimizations
 │   ├── 📄 tailwind.config.js           # Theme tokens, fonts, & animations
+│   ├── 📄 vercel.json                  # SPA routing rules & security headers
 │   ├── 📄 components.json              # shadcn/ui configuration
 │   ├── 📄 .env.example                 # Environment template
 │   │
@@ -471,7 +480,7 @@ studix/
 │       ├── 📂 hooks/                   # Custom React hooks (WebRTC, Sockets)
 │       └── 📂 utils/                   # Formatter, math, and crypto utilities
 │
-└── 📂 app/server/                      # Backend Node.js / Express API
+└── 📂 server/                          # Backend Node.js / Express API
     ├── 📄 index.js                     # Express & Socket.IO server entry
     ├── 📄 package.json                 # Server dependencies
     ├── 📄 serviceAccountKey.json       # Firebase Admin private credentials (gitignored)
@@ -519,7 +528,7 @@ VITE_SOCKET_URL=http://127.0.0.1:4000
 VITE_API_URL=http://127.0.0.1:4000
 ```
 
-### Backend (`app/server/.env`)
+### Backend (`server/.env`)
 ```env
 # =================================================================
 # DATABASE & CACHE CONNECTIONS
@@ -634,17 +643,26 @@ All protected endpoints require `Authorization: Bearer <FIREBASE_ID_TOKEN>`.
 
 #### 1. Compile Frontend (Vite)
 ```bash
-cd app
+# Option A: Root monorepo command
+npm run build:client
+
+# Option B: From client directory
+cd client
 npm run build
 ```
-*Output directory:* `app/dist/` (Deploy to **Vercel**, **Cloudflare Pages**, or **Firebase Hosting**).
+*Output directory:* `client/dist/` (Deploy to **Vercel**, **Cloudflare Pages**, or **Firebase Hosting**).
+*Vercel SPA routing is pre-configured via `client/vercel.json`.*
 
 #### 2. Start Production Server (Node.js / Express)
 ```bash
-cd app/server
+# Option A: Root monorepo command
+npm run start:server
+
+# Option B: From server directory
+cd server
 npm start
 ```
-*(Deploy to **Railway**, **Render**, **Fly.io**, or **AWS EC2** with PM2).*
+*(Deploy to **Render**, **Railway**, **Fly.io**, or **AWS EC2** with PM2. Pre-configured for Render via `render.yaml`).*
 
 ---
 

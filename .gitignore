@@ -71,7 +71,8 @@ npm-debug.log*
 # ========================
 # USER UPLOADS (if any)
 # ========================
-app/server/uploads/
+server/uploads/
+uploads/
 
 # ========================
 # MISC

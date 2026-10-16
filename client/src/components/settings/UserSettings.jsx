@@ -274,7 +274,6 @@ const sections = [
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] bg-background flex overflow-hidden"
         >
-          {}
           <aside className="w-[280px] bg-sidebar/80 backdrop-blur-xl border-r border-border flex flex-col pt-16 shrink-0 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1/2 bg-primary/5 blur-[120px] pointer-events-none" />
             
@@ -323,7 +322,6 @@ const sections = [
                   </div>
                 ))}
 
-                {}
                 <div className="pt-4 border-t border-border">
                   {sections.filter(s => s.id === 'logout').map(section => (
                     <AlertDialog key={section.id}>
@@ -358,7 +356,6 @@ const sections = [
             </div>
           </aside>
 
-          {}
           <main className="flex-1 bg-card relative flex flex-col">
             <motion.button 
               whileTap={mechTap}
@@ -372,7 +369,6 @@ const sections = [
             </motion.button>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden relative">
-              {}
               <div className="sticky top-0 z-40 px-12 pt-16 pb-4 bg-card/90 backdrop-blur-md flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">
                 <span className="opacity-40">Settings</span>
                 <ChevronRight className="w-3 h-3 opacity-20" />
@@ -399,7 +395,6 @@ const sections = [
                          <motion.div variants={itemVariants}>
                           <h2 className="text-2xl font-black text-foreground mb-8 tracking-tight">My Account</h2>
                           <div className="bg-secondary/20 rounded-2xl border border-border shadow-2xl overflow-hidden group/card shadow-black/40">
-                             {}
                              <div className="h-28 bg-gradient-to-r from-[#7148EB] to-[#9455FF] relative">
                                 <motion.div 
                                   initial={{ opacity: 0 }}

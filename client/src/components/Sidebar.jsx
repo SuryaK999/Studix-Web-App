@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Home, Clock, Grid, Folder, Flame, BookOpen, Plus, Compass, ChevronDown, Settings, Hash } from 'lucide-react';
+import { Home, Clock, Grid, Flame, Plus, Compass, ChevronDown, Settings, Hash } from 'lucide-react';
 import { StudixLogo } from './StudixLogo';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useInvisibleScroll } from '@/hooks/useInvisibleScroll';
 import { useNavigate } from 'react-router-dom';
 import { useExploreDialog } from '@/store/exploreDialogStore';
+import { CreateRoom } from './room/CreateRoom';
 
 export function Sidebar({ onSelectRoom }) {
   const [activeTab, setActiveTab] = useState('home');
@@ -78,8 +79,6 @@ export function Sidebar({ onSelectRoom }) {
       </div>
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 hide-scrollbar relative z-10 w-full channels-list">
-
-        {}
         <div className="space-y-1.5 mb-8">
           <SidebarItem 
             icon={<Home className="w-[18px] h-[18px]" />} 
@@ -102,7 +101,6 @@ export function Sidebar({ onSelectRoom }) {
           />
         </div>
 
-        {}
         {rooms.length > 0 && (
            <div className="mb-6 w-full">
             <div className="px-3 mb-2 w-full flex items-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -146,7 +144,6 @@ export function Sidebar({ onSelectRoom }) {
            </div>
         )}
 
-        {}
         <div className="space-y-1 w-full">
           <button 
             onClick={openDialog}
@@ -161,13 +158,22 @@ export function Sidebar({ onSelectRoom }) {
       </div>
 
       <div className="px-4 my-6 relative z-10 w-full flex-shrink-0">
-        <Button className="w-full bg-sidebar-foreground-[0.03] hover:bg-sidebar-foreground/10 text-sidebar-foreground/80 hover:text-sidebar-foreground border-transparent rounded-xl h-10 transition-all shadow-none flex items-center justify-center gap-2">
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
-          <span className="font-bold tracking-tight text-[13px] uppercase">NEW ROOM</span>
-        </Button>
+        <CreateRoom
+          onRoomCreated={(roomId) => {
+            if (onSelectRoom) {
+              onSelectRoom(roomId);
+            } else {
+              navigate(`/room/${roomId}`);
+            }
+          }}
+          trigger={
+            <Button className="w-full bg-sidebar-foreground-[0.03] hover:bg-sidebar-foreground/10 text-sidebar-foreground/80 hover:text-sidebar-foreground border-transparent rounded-xl h-10 transition-all shadow-none flex items-center justify-center gap-2 cursor-pointer">
+              <Plus className="w-4 h-4" strokeWidth={2.5} />
+              <span className="font-bold tracking-tight text-[13px] uppercase">NEW ROOM</span>
+            </Button>
+          }
+        />
       </div>
-
-      {}
       <div className="mt-auto px-2 py-3 border-t border-sidebar-border bg-sidebar relative z-20 shrink-0">
         <div 
           className="group flex items-center justify-between p-2 rounded-xl transition-all duration-200 hover:bg-sidebar-foreground/5 active:scale-[0.98] border border-transparent hover:border-sidebar-border relative cursor-pointer"
@@ -243,8 +249,6 @@ const SidebarSubItem = memo(function SidebarSubItem({ label, onClick }) {
     >
       <Hash className="w-4 h-4 text-sidebar-foreground/30 group-hover:text-sidebar-foreground/60 transition-colors flex-shrink-0" strokeWidth={2} />
       <span className="truncate text-left flex-1" title={label}>{label}</span>
-      
-      {}
       <div className="w-1.5 h-1.5 rounded-full bg-sidebar-foreground/20 group-hover:bg-sidebar-foreground/40 transition-colors flex-shrink-0 ml-1" />
     </button>
   );

@@ -13,7 +13,7 @@ import { ShineBorder } from '@/components/magicui/shine-border';
 const ROOM_NAME_MIN = 2;
 const ROOM_NAME_MAX = 50;
 
-export function CreateRoom({ onRoomCreated }) {
+export function CreateRoom({ onRoomCreated, trigger }) {
   const [roomName, setRoomName] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -87,12 +87,14 @@ export function CreateRoom({ onRoomCreated }) {
       }
     }}>
       <DialogTrigger asChild>
-        <Button
-          className="font-bold tracking-widest uppercase h-[52px] px-8 rounded-full transition-all duration-300 active:scale-[0.98] bg-[#8b5cf6] hover:bg-[#7c3aed] text-white shadow-md border border-white/10 dark:bg-black/50 dark:backdrop-blur-xl dark:border-2 dark:border-purple-500/50 dark:text-purple-400 dark:shadow-[0_0_15px_rgba(168,85,247,0.2)] dark:hover:bg-purple-500/20 dark:hover:border-purple-400 dark:hover:shadow-[0_0_25px_rgba(168,85,247,0.4)] dark:hover:text-purple-200"
-        >
-          <Plus className="h-[18px] w-[18px] mr-2" />
-          CREATE ROOM
-        </Button>
+        {trigger || (
+          <Button
+            className="font-bold tracking-widest uppercase h-[52px] px-8 rounded-full transition-all duration-300 active:scale-[0.98] bg-[#8b5cf6] hover:bg-[#7c3aed] text-white shadow-md border border-white/10 dark:bg-black/50 dark:backdrop-blur-xl dark:border-2 dark:border-purple-500/50 dark:text-purple-400 dark:shadow-[0_0_15px_rgba(168,85,247,0.2)] dark:hover:bg-purple-500/20 dark:hover:border-purple-400 dark:hover:shadow-[0_0_25px_rgba(168,85,247,0.4)] dark:hover:text-purple-200 cursor-pointer"
+          >
+            <Plus className="h-[18px] w-[18px] mr-2" />
+            CREATE ROOM
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent 
         onInteractOutside={(e) => e.preventDefault()}
@@ -152,7 +154,7 @@ export function CreateRoom({ onRoomCreated }) {
                      const id = createdRoom.id || createdRoom._id;
                      setIsOpen(false);
                      setCreatedRoom(null);
-                     onRoomCreated(id);
+                     onRoomCreated?.(id);
                    }}
                  >
                    Enter Room

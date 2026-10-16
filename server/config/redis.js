@@ -23,14 +23,28 @@ async function connectRedis() {
     const redisOptions = {
       lazyConnect:          true,
       enableReadyCheck:     true,
-      maxRetriesPerRequest: 2,
-      connectTimeout:       8000,
+      maxRetriesPerRequest: 1,
+      connectTimeout:       4000,
+      retryStrategy(times) {
+        if (times > 2) return null; // Stop retrying on persistent errors
+        return Math.min(times * 200, 1000);
+      },
       ...(isTLS && { tls: {} }),  
     };
 
     pubClient = new Redis(REDIS_URL, redisOptions);
     subClient  = pubClient.duplicate();
     cacheClient = pubClient.duplicate();
+
+    const handleRedisError = (name) => (err) => {
+      if (_ready) {
+        console.error(`❌ Redis ${name} error:`, err.message);
+      }
+    };
+
+    pubClient.on('error', handleRedisError('pub'));
+    subClient.on('error', handleRedisError('sub'));
+    cacheClient.on('error', handleRedisError('cache'));
 
     await Promise.all([
       pubClient.connect(),
@@ -41,12 +55,12 @@ async function connectRedis() {
     _ready = true;
     console.log('✅ Redis connected');
 
-    pubClient.on('error', (err) => console.error('❌ Redis pub error:', err.message));
-    subClient.on('error', (err) => console.error('❌ Redis sub error:', err.message));
-
   } catch (err) {
     console.error('❌ Redis connection failed:', err.message);
     console.warn('⚠️  Falling back to in-memory adapter');
+    try { pubClient?.disconnect(); } catch (_) {}
+    try { subClient?.disconnect(); } catch (_) {}
+    try { cacheClient?.disconnect(); } catch (_) {}
     _ready = false;
     pubClient = null;
     subClient = null;

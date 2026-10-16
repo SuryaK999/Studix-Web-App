@@ -531,9 +531,7 @@ export function ChatPanel({ roomId, roomData }) {
 
   return (
     <div className="flex flex-col h-full bg-[#09090b] relative overflow-hidden">
-      {}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
-      {}
       <header className="shrink-0 flex items-center justify-between h-16 md:h-20 px-5 md:px-6 border-b border-[#27272a]/30 bg-[#09090b]/40 backdrop-blur-2xl z-20 gap-4">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -582,13 +580,10 @@ export function ChatPanel({ roomId, roomData }) {
         </div>
       </header>
 
-      {}
 
-      {}
       <div className="flex-1 relative overflow-hidden group/list min-h-0 z-10" data-radial-context="chat">
         <ScrollArea className="h-full w-full" ref={scrollRef}>
           <div className="px-5 py-8 max-w-5xl mx-auto min-h-full flex flex-col justify-end space-y-1">
-            {}
             {hasMoreMessages && messages.length >= PAGE_SIZE && (
               <div className="flex justify-center mb-8">
                 <Button
@@ -604,7 +599,6 @@ export function ChatPanel({ roomId, roomData }) {
               </div>
             )}
 
-            {}
             {messages.length === 0 && !hasMoreMessages && !loadingOlder && (
               <div className="flex-1 flex flex-col items-center justify-center min-h-[400px] text-center px-4">
                 <div className="flex flex-col items-center gap-3">
@@ -633,7 +627,6 @@ export function ChatPanel({ roomId, roomData }) {
           </div>
         </ScrollArea>
 
-        {}
         <AnimatePresence>
           {showScrollBottom && (
             <motion.button
@@ -655,7 +648,6 @@ export function ChatPanel({ roomId, roomData }) {
         </AnimatePresence>
       </div>
 
-      {}
       <AnimatePresence>
         {replyTarget && (
           <motion.div
@@ -795,7 +787,6 @@ export function ChatPanel({ roomId, roomData }) {
           </div>
       </form>
 
-      {}
       <Dialog open={showSummaryModal} onOpenChange={setShowSummaryModal}>
         <DialogContent className="sm:max-w-lg border-border shadow-2xl bg-background/95 backdrop-blur-xl">
           <DialogHeader>

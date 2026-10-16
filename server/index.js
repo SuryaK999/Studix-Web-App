@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
 const express = require('express');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
@@ -21,8 +21,8 @@ const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
-  origin: function (origin, callback) {
-    
+  origin: function (_origin, callback) {
+    // Allow local development and deployed frontend origins
     callback(null, true);
   },
   credentials: true,
@@ -105,7 +105,7 @@ async function start() {
   initSockets(io);
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Studix Server [PID: ${process.pid}] is LIVER on port ${PORT}`);
+    console.log(`🚀 Studix Server [PID: ${process.pid}] is LIVE on port ${PORT}`);
     console.log(`   Client origin: ${CLIENT_ORIGIN}`);
     console.log(`   Health: http://127.0.0.1:${PORT}/health`);
   });

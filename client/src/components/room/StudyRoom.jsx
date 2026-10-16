@@ -31,7 +31,6 @@ const AiStudyBuddy = lazy(() => import('@/components/ai/AiStudyBuddy').then(m =>
 function ChatSkeleton() {
   return (
     <div className="flex flex-col h-full bg-[#12131B] p-5 gap-4">
-      {}
       <div className="flex items-center gap-3 pb-4 border-b border-white/[0.04]">
         <div className="w-10 h-10 rounded-full skeleton" />
         <div className="space-y-2">
@@ -39,7 +38,6 @@ function ChatSkeleton() {
           <div className="h-2 w-16 rounded skeleton" />
         </div>
       </div>
-      {}
       {[0.7, 0.5, 0.85, 0.4, 0.6].map((w, i) => (
         <div key={i} className={cn("flex gap-3", i % 2 === 0 ? "" : "flex-row-reverse")}>
           <div className="w-8 h-8 rounded-full skeleton shrink-0" />
@@ -49,7 +47,6 @@ function ChatSkeleton() {
           </div>
         </div>
       ))}
-      {}
       <div className="mt-auto">
         <div className="h-12 rounded-xl skeleton" />
       </div>
@@ -231,7 +228,6 @@ function StudyRoomContent({ roomId, onLeave }) {
     <div className={`flex h-screen w-full font-sans text-white overflow-hidden bg-[#0A0B10] selection:bg-primary/30 transition-colors duration-500`}
          style={{ colorScheme: activeTheme === 'light' ? 'light' : 'dark' }}>
       
-      {}
       <nav className="w-[72px] bg-[#0C0D12] flex flex-col items-center py-3 shrink-0 z-30 border-r border-white/[0.04]">
         <div className="w-12 h-12 rounded-[16px] bg-primary flex items-center justify-center shrink-0 mb-3 cursor-pointer shadow-[0_4px_20px_rgba(113,72,235,0.35)] hover:rounded-[12px] transition-all duration-200">
           <Bot className="w-7 h-7 text-white" />
@@ -259,7 +255,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         </div>
       </nav>
 
-      {}
       <aside 
         style={{ width: isLeftSidebarCollapsed ? 0 : leftWidth }}
         className={cn(
@@ -344,7 +339,6 @@ function StudyRoomContent({ roomId, onLeave }) {
           })}
         </div>
 
-        {}
         <div className="mt-auto px-3 py-2.5 border-t border-white/[0.04] bg-[#0C0D12]">
           <div 
             className="group flex items-center justify-between p-1.5 rounded-lg transition-all duration-200 hover:bg-white/[0.03] active:scale-[0.98] cursor-pointer"
@@ -381,7 +375,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         </div>
       </aside>
 
-      {}
       {!isLeftSidebarCollapsed && (
         <div
           onMouseDown={startResizingLeft}
@@ -389,9 +382,7 @@ function StudyRoomContent({ roomId, onLeave }) {
         />
       )}
 
-      {}
       <main className="flex-1 flex flex-col min-w-0 bg-[#12131B] z-10 relative">
-        {}
         <header className="h-[52px] px-4 flex items-center justify-between shrink-0 border-b border-white/[0.04] bg-[#13141B]/80 backdrop-blur-xl z-10">
           <div className="flex items-center gap-3">
             {isLeftSidebarCollapsed && (
@@ -426,7 +417,6 @@ function StudyRoomContent({ roomId, onLeave }) {
           </div>
         </header>
 
-        {}
         <div className="flex-1 overflow-hidden relative">
           <Suspense fallback={<ChatSkeleton />}>
              <AnimatePresence mode="wait">
@@ -449,7 +439,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         </div>
       </main>
 
-      {}
       {!isRightSidebarCollapsed && (
         <div
           onMouseDown={startResizingRight}
@@ -457,7 +446,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         />
       )}
 
-      {}
       <aside 
         style={{ width: isRightSidebarCollapsed ? 0 : rightWidth }}
         className={cn(
@@ -477,7 +465,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         </header>
 
         <div ref={rightSidebarScrollRef} className="flex-1 overflow-y-auto custom-scrollbar px-4 py-5 space-y-6">
-          {}
           <section>
             <div className="flex items-center justify-between mb-3">
               <h4 className="text-[11px] font-black text-[#4A4D57] uppercase tracking-[0.12em]">Members</h4>
@@ -488,7 +475,6 @@ function StudyRoomContent({ roomId, onLeave }) {
             <MembersList roomId={roomId} />
           </section>
 
-          {}
           <section className="pt-5 border-t border-white/[0.04]">
             <div className="flex items-center justify-between mb-3">
                <h4 className="text-[11px] font-black text-[#4A4D57] uppercase tracking-[0.12em]">Tasks & Shared Files</h4>
@@ -504,7 +490,6 @@ function StudyRoomContent({ roomId, onLeave }) {
         roomId={roomId}
       />
 
-      {}
       <Dialog open={showLeaveModal} onOpenChange={setShowLeaveModal}>
         <DialogContent className="bg-[#0e0f14] border-white/5 shadow-2xl">
           <DialogHeader>
