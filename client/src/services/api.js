@@ -102,3 +102,19 @@ export async function fetchRoomPresence(roomId) {
 export async function leaveRoom(roomId) {
   return post(`/api/rooms/${encodeURIComponent(roomId)}/leave`, {});
 }
+
+export async function deleteMessageApi(roomId, messageId) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (auth.currentUser) {
+    const token = await auth.currentUser.getIdToken();
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  const res = await fetch(`${API_URL}/api/messages/${encodeURIComponent(roomId)}/${encodeURIComponent(messageId)}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!res.ok) {
+    throw new Error(`API delete error ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
+}

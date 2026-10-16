@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { useUsersStore } from '@/store/usersStore';
 
 export const MessageItem = memo(function MessageItem({
-  message, isOwn, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
+  message, isOwn, canDelete, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
 }) {
   const users = useUsersStore(state => state.users);
   const realUser = users[message.senderId];
@@ -123,14 +123,17 @@ export const MessageItem = memo(function MessageItem({
   }, [handleEditSave, handleEditCancel]);
 
   const handleDelete = useCallback(() => {
-    onDelete?.(message.id);
-  }, [onDelete, message.id]);
+    const idToDelete = message.id || message.tempId;
+    if (idToDelete) {
+      onDelete?.(idToDelete);
+    }
+  }, [onDelete, message.id, message.tempId]);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const handler = (e) => {
-      const action = (e).detail?.action;
+      const action = e.detail?.action;
       if (action === 'msg-copy') handleCopy();
       if (action === 'msg-edit') handleEditStart();
       if (action === 'msg-delete') handleDelete();
@@ -140,13 +143,16 @@ export const MessageItem = memo(function MessageItem({
         }));
       }
       if (action === 'msg-react') {
-        
         window.dispatchEvent(new CustomEvent(`studix:react:${message.id}`, { detail: { open: true } }));
       }
     };
 
     el.addEventListener('radial-action', handler);
-    return () => el.removeEventListener('radial-action', handler);
+    el.addEventListener('studix-action', handler);
+    return () => {
+      el.removeEventListener('radial-action', handler);
+      el.removeEventListener('studix-action', handler);
+    };
   }, [handleCopy, handleEditStart, handleDelete, message]);
 
   const renderContent = () => {
@@ -464,10 +470,24 @@ export const MessageItem = memo(function MessageItem({
                     const reactionArea = containerRef.current?.querySelector('[data-reaction-area]');
                     (reactionArea)?.click();
                   }}
+                  title="Add reaction"
                   className="w-6 h-6 rounded-full bg-[#1e1f2b] border border-white/10 flex items-center justify-center text-[#8e9297] hover:text-white hover:bg-primary/20 hover:border-primary/30 transition-all duration-200 shadow-xl"
                 >
                   <SmilePlus size={14} />
                 </button>
+                {(isOwn || canDelete) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete();
+                    }}
+                    title="Delete message"
+                    className="w-6 h-6 rounded-full bg-[#1e1f2b] border border-red-500/30 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-600/60 hover:border-red-500/60 transition-all duration-200 shadow-xl"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                )}
               </div>
             )}
           </div>

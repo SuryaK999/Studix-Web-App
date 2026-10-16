@@ -40,4 +40,46 @@ router.get('/:roomId', async (req, res) => {
   }
 });
 
+const Room = require('../models/Room');
+const { expressAuthMiddleware } = require('../middleware/auth');
+const mongoose = require('mongoose');
+
+router.delete('/:roomId/:messageId', expressAuthMiddleware, async (req, res) => {
+  try {
+    const { roomId, messageId } = req.params;
+    const uid = req.user.uid;
+
+    let msg = null;
+    if (mongoose.Types.ObjectId.isValid(messageId)) {
+      msg = await Message.findById(messageId);
+    }
+    if (!msg) {
+      msg = await Message.findOne({ roomId, tempId: messageId });
+    }
+
+    if (msg) {
+      let canDelete = msg.senderId === uid;
+      if (!canDelete) {
+        if (mongoose.Types.ObjectId.isValid(roomId)) {
+          const room = await Room.findById(roomId).lean();
+          if (room && (room.createdBy === uid || room.creatorId === uid || (room.adminIds && room.adminIds.includes(uid)))) {
+            canDelete = true;
+          }
+        }
+      }
+
+      if (!canDelete) {
+        return res.status(403).json({ error: 'Not authorized to delete this message' });
+      }
+
+      await Message.deleteOne({ _id: msg._id });
+    }
+
+    res.json({ success: true, messageId });
+  } catch (err) {
+    console.error('[API/messages] Delete error:', err.message);
+    res.status(500).json({ error: 'Failed to delete message' });
+  }
+});
+
 module.exports = router;

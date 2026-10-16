@@ -58,14 +58,14 @@ function registerChatHandlers(socket, io) {
       io.to(roomId).emit('chat:receive', broadcastPayload);
 
       // 2. ASYNC PERSISTENCE: Save to MongoDB in background
-      Message.create({ roomId, ...msgPayload })
+      Message.create({ roomId, tempId: message.tempId || null, ...msgPayload })
         .then((saved) => {
           const realId = saved._id.toString();
-          socket.emit('chat:saved', { tempId: message.tempId, id: realId });
+          // Broadcast to the whole room so all participants replace tempId with realId
+          io.to(roomId).emit('chat:saved', { tempId: message.tempId, id: realId });
         })
         .catch((dbErr) => {
           console.warn(`[Chat] DB async save notice for room ${roomId}:`, dbErr.message);
-          // Message already delivered in real-time to active participants
         });
 
     } catch (err) {
@@ -198,12 +198,46 @@ function registerChatHandlers(socket, io) {
     try {
       if (!roomId || !messageId || !socket.user) return;
 
-      const msg = await Message.findById(messageId);
-      if (!msg || msg.senderId !== socket.user.uid) return; 
+      const mongoose = require('mongoose');
+      let msg = null;
+      if (mongoose.Types.ObjectId.isValid(messageId)) {
+        msg = await Message.findById(messageId);
+      }
+      if (!msg) {
+        msg = await Message.findOne({ roomId, tempId: messageId });
+      }
 
-      await Message.findByIdAndDelete(messageId);
+      let deletedDocId = null;
+      let deletedTempId = null;
 
-      io.to(roomId).emit('chat:message_deleted', { messageId });
+      if (msg) {
+        let canDelete = msg.senderId === socket.user.uid;
+        if (!canDelete) {
+          try {
+            const Room = require('../models/Room');
+            if (mongoose.Types.ObjectId.isValid(roomId)) {
+              const room = await Room.findById(roomId).lean();
+              if (room && (room.createdBy === socket.user.uid || room.creatorId === socket.user.uid || (room.adminIds && room.adminIds.includes(socket.user.uid)))) {
+                canDelete = true;
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (canDelete) {
+          deletedDocId = msg._id.toString();
+          deletedTempId = msg.tempId;
+          await Message.deleteOne({ _id: msg._id });
+        } else {
+          return;
+        }
+      }
+
+      io.to(roomId).emit('chat:message_deleted', { 
+        messageId, 
+        realId: deletedDocId, 
+        tempId: deletedTempId 
+      });
     } catch (err) {
       console.warn('[Chat] Delete error:', err.message);
     }

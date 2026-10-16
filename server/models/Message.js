@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const messageSchema = new mongoose.Schema(
   {
     roomId:         { type: String, required: true, index: true },
+    tempId:         { type: String, default: null, index: true },
     senderId:       { type: String, required: true },
     senderName:     { type: String, required: true },
     senderUsername: { type: String, default: null },

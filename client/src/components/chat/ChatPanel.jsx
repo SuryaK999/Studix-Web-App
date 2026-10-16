@@ -19,7 +19,7 @@ import { storageService } from '@/lib/storage/storageService';
 import { saveVoice } from '@/services/voiceStorageService';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { fetchMessages } from '@/services/api';
+import { fetchMessages, deleteMessageApi } from '@/services/api';
 import { summarizeChatDiscussion, generateAiStudyResponse } from '@/services/aiService';
 import { differenceInMinutes } from 'date-fns';
 
@@ -28,7 +28,7 @@ const PAGE_SIZE = 50;
 export function ChatPanel({ roomId, roomData }) {
   const { user } = useAuth();
   const roomName = useMemo(() => roomData?.name || 'Study Room', [roomData?.name]);
-  const isAdmin = useMemo(() => roomData?.adminIds?.includes(user?.uid), [roomData?.adminIds, user?.uid]);
+  const isAdmin = useMemo(() => roomData?.adminIds?.includes(user?.uid) || roomData?.creatorId === user?.uid || roomData?.createdBy === user?.uid, [roomData, user?.uid]);
   const avatarUrl = roomData?.avatarUrl;
 
   const [messages, setMessages] = useState(() => {
@@ -80,10 +80,16 @@ export function ChatPanel({ roomId, roomData }) {
         const { messages: msgs, hasMore } = await fetchMessages(roomId);
         if (cancelled) return;
         setMessages(prev => {
-          const map = new Map();
-          prev.forEach(m => { if (m.id) map.set(String(m.id), m); });
-          msgs.forEach(m => { if (m.id) map.set(String(m.id), m); });
-          return Array.from(map.values()).sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          // Server messages are authoritative; deleted messages must never be restored from cache
+          const recentTemps = prev.filter(m => 
+            String(m.id).startsWith('temp-') && 
+            (Date.now() - new Date(m.createdAt || 0).getTime() < 15000)
+          );
+          const combined = [...msgs, ...recentTemps];
+          try {
+            localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(combined.slice(-80)));
+          } catch (_) {}
+          return combined;
         });
         setHasMoreMessages(hasMore);
         if (msgs.length > 0) {
@@ -207,8 +213,22 @@ export function ChatPanel({ roomId, roomData }) {
       );
     };
 
-    const handleMessageDeleted = ({ messageId }) => {
-      setMessages(prev => prev.filter(m => String(m.id) !== messageId));
+    const handleMessageDeleted = ({ messageId, realId, tempId }) => {
+      setMessages(prev => {
+        const next = prev.filter(m => {
+          const idStr = String(m.id);
+          const tempStr = String(m.tempId || '');
+          const targetStr = String(messageId);
+          if (idStr === targetStr || tempStr === targetStr) return false;
+          if (realId && (idStr === String(realId) || tempStr === String(realId))) return false;
+          if (tempId && (idStr === String(tempId) || tempStr === String(tempId))) return false;
+          return true;
+        });
+        try {
+          localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
+        } catch (_) {}
+        return next;
+      });
     };
 
     socket.on('typing:update',        handleTypingUpdate);
@@ -567,10 +587,25 @@ export function ChatPanel({ roomId, roomData }) {
   }, [socket, roomId]);
 
   const onDeleteMessage = useCallback((messageId) => {
-    if (!socket) return;
+    if (!messageId) return;
     
-    setMessages(prev => prev.filter(m => String(m.id) !== messageId));
-    socket.emit('chat:delete', { roomId, messageId });
+    setMessages(prev => {
+      const next = prev.filter(m => String(m.id) !== String(messageId) && String(m.tempId || '') !== String(messageId));
+      try {
+        localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
+      } catch (_) {}
+      return next;
+    });
+
+    if (socket && socket.connected) {
+      socket.emit('chat:delete', { roomId, messageId });
+    }
+
+    deleteMessageApi(roomId, messageId).catch(err => {
+      console.warn('[ChatPanel] deleteMessageApi fallback notice:', err?.message);
+    });
+
+    toast.success('Message deleted');
   }, [socket, roomId]);
 
   const uploadRoomAvatar = async (e) => {
@@ -690,6 +725,7 @@ export function ChatPanel({ roomId, roomData }) {
                 key={msg.id}
                 message={msg}
                 isOwn={msg.senderId === user?.uid}
+                canDelete={msg.senderId === user?.uid || isAdmin}
                 isFirstInGroup={msg.isFirstInGroup}
                 isLastInGroup={msg.isLastInGroup}
                 roomId={roomId}
