@@ -24,9 +24,9 @@ export async function executeGroqChatCompletion({ messages, temperature = 0.6, m
 
   const configuredModel = import.meta.env.VITE_GROQ_MODEL;
   const candidateModels = Array.from(new Set([
+    'qwen/qwen3.8-27b',
     configuredModel,
     'openai/gpt-oss-120b',
-    'qwen/qwen3.8-27b',
     'openai/gpt-oss-20b',
     'llama-3.3-70b-versatile'
   ].filter(Boolean)));
@@ -84,29 +84,35 @@ export async function callGroqApi({ prompt, context = '', history = [], signal =
 
   const systemMessage = {
     role: 'system',
-    content: `You are StudyBuddy AI, an empathetic, highly knowledgeable, and patient academic tutor on Studix (a real-time collaborative study platform).
+    content: `You are StudyBuddy AI, an authentic, highly knowledgeable, and friendly study partner on Studix (a collaborative study platform).
+
+HUMANIZER & COMMUNICATION RULES:
+- Sound like a sharp, supportive human peer or mentor sitting next to the student.
+- DO NOT use throat-clearing filler like "Sure! I would be happy to explain that!" or "As an AI, I...". Answer directly.
+- BANNED CLICHES: Never use robotic AI words like "delve", "testament", "tapestry", "plethora", "beacon", "in conclusion", or "it is important to note".
+- Use natural conversational flow, varied sentence lengths, and clear real-world examples.
 
 CORE GUIDELINES BY QUESTION TYPE:
 1. GREETINGS & CASUAL CHITCHAT (e.g., "hi", "hello", "hey", "how are you", "what's up", introductions):
-   - Reply warmly, naturally, and concisely in 2-3 short sentences.
-   - Welcome the student or study group and suggest 2-3 specific ways you can help right now (e.g., explaining a concept, reviewing code, generating a quiz, or summarizing notes).
-   - NEVER generate analytical breakdown tables, linguistic essays, or definitions for simple greetings like "hi" or "hello"!
+   - Reply warmly and naturally in 1-2 friendly sentences.
+   - Welcome them and ask what they'd like to study or code today.
+   - NEVER generate tables, essays, or linguistic breakdowns for greetings!
 
 2. CONCEPT EXPLANATIONS (e.g., "explain recursion", "what is useEffect"):
-   - Structure clearly with Markdown:
+   - Structure cleanly with Markdown:
      - ### 💡 Concept Overview (concise 1-2 sentence core idea)
-     - ### 🔍 How It Works (intuitive real-world analogy or step-by-step breakdown)
+     - ### 🔍 How It Works (intuitive analogy or step-by-step logic)
      - ### 💻 Practical Example (short clean code snippet or concrete application)
      - ### 🎯 Key Takeaway (what to remember)
 
-3. CODE & DEBUGGING (e.g., error messages, bug reports, "how do I code X"):
+3. CODE & DEBUGGING:
    - Identify the cause or solution directly.
-   - Provide a clean, formatted code block with language syntax identifier (e.g. \`\`\`javascript).
-   - Provide 2-3 crisp bullet points explaining why the fix works.
+   - Provide a clean, formatted code block with language identifier.
+   - Add 2-3 crisp bullet points explaining why the fix works.
 
-4. COMPARISONS & DIFFERENCES (e.g., "SQL vs NoSQL", "let vs const"):
+4. COMPARISONS & DIFFERENCES:
    - Use a clean, well-formatted Markdown table (| Feature | A | B |).
-   - Follow with a brief "When to use which" recommendation.
+   - Follow with a direct "When to use which" recommendation.
 
 5. QUIZZES & PRACTICE:
    - Provide 3-5 numbered questions with clear difficulty levels.
@@ -114,8 +120,7 @@ CORE GUIDELINES BY QUESTION TYPE:
 
 6. FORMATTING RULES:
    - Always output valid GitHub-Flavored Markdown (GFM).
-   - NEVER output raw HTML tags like <br>, <p>, or <table>. Use standard Markdown line breaks and table formatting.
-   - Keep responses structured, readable, and visually clean.
+   - NEVER output raw HTML tags like <br>, <p>, or <table>.
 ${context ? `\nActive Room Context from Peers:\n${context}` : ''}`
   };
 
@@ -150,97 +155,81 @@ export function sanitizeAiInput(input) {
 }
 
 /**
- * Build clean structured study debrief fallback
+ * Build clean, humanized study summary fallback when offline or when API is unavailable
  */
 export function buildSmartFallbackSummary(textMessages = [], roomName = 'Study Room') {
   if (!textMessages || textMessages.length === 0) {
-    return `### 🎯 Session Overview
-No messages have been recorded in **${roomName}** yet. Start studying and chatting to generate a live AI debrief!
+    return `## 📌 Summary
+No messages have been recorded in **${roomName}** yet. As soon as you and your peers start chatting, you can generate a quick summary here!
 
-### 💡 Key Technical Insights & Topics
-- Discussion channel is active and awaiting topic proposals.
-- Real-time AI analysis will synthesize concepts, questions, and code discussions once messages are exchanged.
+## 💡 Key Discussion Points
+- Waiting for the first discussion topics or questions.
 
-### ⚡ Decisions & Answers Reached
-- Baseline room established; waiting for active collaborative study items.
+## 📋 Action Items
+*No pending action items or tasks.*
 
-### 📋 Action Items & Next Steps
-1. **[Next Up]** Share your first study goal or technical question in the room chat.
-2. **[Next Up]** Tag \`@ai\` for immediate technical explanations or formula breakdowns.
-
-### 🧠 Study Notes & Strategic Recommendations
-- Break complex study topics into focused questions for more effective peer collaboration.
-
-### 🏷️ Key Focus Topics
-Tags: #StudyRoom #Collaboration #Onboarding`;
+## 🎯 Next Study Focus
+Start by sharing what you're working on today or ask a question to kick off the session!`;
   }
 
   const participants = Array.from(new Set(textMessages.map(m => m.senderName || 'Anonymous'))).filter(Boolean);
   const questions = textMessages.filter(m => m.text && m.text.includes('?')).slice(-5);
 
-  // Extract meaningful keywords
+  // Extract meaningful keywords from actual messages
   const allText = textMessages.map(m => m.text || '').join(' ');
   const wordCounts = {};
   allText.toLowerCase().replace(/[^a-z0-9_\-\s]/g, '').split(/\s+/).forEach(w => {
-    if (w.length > 3 && !['about', 'there', 'would', 'could', 'should', 'think', 'where', 'which', 'what', 'have', 'from', 'this', 'that', 'with', 'your', 'just', 'been', 'were'].includes(w)) {
+    if (w.length > 3 && !['about', 'there', 'would', 'could', 'should', 'think', 'where', 'which', 'what', 'have', 'from', 'this', 'that', 'with', 'your', 'just', 'been', 'were', 'hello', 'good', 'some'].includes(w)) {
       wordCounts[w] = (wordCounts[w] || 0) + 1;
     }
   });
 
   const topKeywords = Object.entries(wordCounts)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 6)
+    .slice(0, 5)
     .map(([w]) => w.charAt(0).toUpperCase() + w.slice(1));
 
-  // Detect potential action statements
-  const actionTriggers = ['need to', 'must', 'push', 'finish', 'complete', 'fix', 'test', 'deploy', 'polish', 'clean', 'update', 'submit'];
-  const detectedActions = textMessages
-    .filter(m => actionTriggers.some(t => m.text && m.text.toLowerCase().includes(t)))
+  // Detect explicit task commitments (e.g. "I will", "let's finish", "need to push")
+  const commitmentPatterns = [/\b(i will|i'll|let's|we need to|todo:|task:)\b/i];
+  const detectedTasks = textMessages
+    .filter(m => commitmentPatterns.some(p => p.test(m.text || '')))
     .slice(-4);
 
-  let out = `### 🎯 Session Overview\n`;
-  out += `Collaborative study and development session in **${roomName}** with **${participants.join(', ') || 'study group'}**. Analyzed ${textMessages.length} messages focusing on active problem solving, milestone tracking, and technical coordination.\n\n`;
+  const isBriefChat = textMessages.length <= 10;
+  const participantStr = participants.length > 0 ? participants.join(', ') : 'Study group';
 
-  out += `### 💡 Key Technical Insights & Topics\n`;
-  if (topKeywords.length > 0) {
-    out += `- **Core Focus Areas**: High discussion density around **${topKeywords.join(' • ')}**.\n`;
+  let out = `## 📌 Summary\n`;
+  if (isBriefChat) {
+    out += `The group recently opened discussion in **${roomName}** with **${participantStr}**. Across ${textMessages.length} brief exchange${textMessages.length === 1 ? '' : 's'}, members connected and initiated conversation.\n\n`;
+  } else {
+    out += `Active study session in **${roomName}** with **${participantStr}** (${textMessages.length} messages analyzed). The team collaborated on shared learning objectives and problem solving.\n\n`;
   }
+
+  out += `## 💡 Key Discussion Points\n`;
   if (questions.length > 0) {
     questions.forEach(q => {
-      out += `- **Problem Explored**: *"${q.text.slice(0, 110)}"* (raised by **${q.senderName || 'peer'}**).\n`;
+      out += `- **Question raised by ${q.senderName || 'peer'}**: *"${q.text.slice(0, 120)}"${q.text.length > 120 ? '...' : ''}*\n`;
     });
+  } else if (topKeywords.length > 0) {
+    out += `- **Topics mentioned**: High interest around **${topKeywords.join(', ')}**.\n`;
+    out += `- **Interaction**: Members shared quick updates and coordinated in the room.\n`;
   } else {
-    out += `- **Technical Exchange**: Active peer synchronization regarding system architecture, component state, and implementation standards.\n`;
-  }
-  out += `- **Collaboration Cadence**: Team members maintained continuous communication with rapid status checks and task handoffs.\n\n`;
-
-  out += `### ⚡ Decisions & Answers Reached\n`;
-  out += `- **Milestone Alignment**: Consolidated ongoing priorities across participating members (**${participants.slice(0, 3).join(', ')}**).\n`;
-  out += `- **Code & Quality Standards**: Agreed on verifying build integrity and refining core interactions before final sign-off.\n`;
-  out += `- **Version Control**: Confirmed active branch synchronization to ensure shared visibility.\n\n`;
-
-  out += `### 📋 Action Items & Next Steps\n`;
-  if (detectedActions.length > 0) {
-    detectedActions.forEach((act, idx) => {
-      const priority = idx === 0 ? '[High Priority]' : '[Medium Priority]';
-      out += `${idx + 1}. **${priority}** ${act.text.slice(0, 120)} - *Owner: ${act.senderName || 'Team'}*\n`;
-    });
-  } else {
-    out += `1. **[High Priority]** Review and implement all discussed code enhancements and study goals.\n`;
-    out += `2. **[Medium Priority]** Consolidate verified solutions into shared study notes.\n`;
-    out += `3. **[Next Up]** Execute final peer QA verification prior to concluding this study block.\n`;
+    out += `- Members greeted each other and checked into the study channel.\n`;
   }
   out += `\n`;
 
-  out += `### 🧠 Study Notes & Strategic Recommendations\n`;
-  out += `- Document key technical decisions as you go to avoid context loss between study sessions.\n`;
-  out += `- Maintain atomic git commits or discrete note entries to make peer review and tracking effortless.\n\n`;
+  out += `## 📋 Action Items\n`;
+  if (detectedTasks.length > 0) {
+    detectedTasks.forEach((t, i) => {
+      out += `${i + 1}. ${t.text.trim()} *(mentioned by ${t.senderName || 'Team'})*\n`;
+    });
+  } else {
+    out += `*No pending action items or tasks were assigned in this discussion.*\n`;
+  }
+  out += `\n`;
 
-  out += `### 🏷️ Key Focus Topics\n`;
-  const tags = topKeywords.length > 0 
-    ? topKeywords.map(k => `#${k}`).join(' ') 
-    : `#${roomName.replace(/\s+/g, '')} #StudySession #Collaboration`;
-  out += `Tags: ${tags}`;
+  out += `## 🎯 Next Study Focus\n`;
+  out += `Continue building understanding in **${roomName}**. Feel free to tag \`@ai\` in the chat if you need an explanation, code review, or practice quiz on any topic!`;
 
   return out;
 }
@@ -254,7 +243,7 @@ export function summarizeChatDiscussion(messages = [], roomName = 'Study Room') 
 }
 
 /**
- * Generate deep executive chat summary using Groq Llama 3.3 70B
+ * Generate humanized, grounded chat summary using Groq LPU with zero hallucination
  */
 export async function generateExecutiveChatSummary({ messages = [], roomName = 'Study Room', signal = null }) {
   const textMessages = (messages || []).filter(m => m.text && !m.text.startsWith('Voice message'));
@@ -264,56 +253,52 @@ export async function generateExecutiveChatSummary({ messages = [], roomName = '
 
   if (isGroqConfigured()) {
     try {
-      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
-      const model = import.meta.env.VITE_GROQ_MODEL || 'llama-3.3-70b-versatile';
-
-      // Provide up to last 40 messages formatted cleanly with chronological order
+      // Provide up to last 40 messages formatted cleanly in chronological order
       const transcript = textMessages
         .slice(-40)
         .map(m => `[${m.senderName || 'Member'}]: ${m.text}`)
         .join('\n');
 
-      const systemPrompt = `You are an elite Lead Architect and Principal Academic Study Mentor on Studix (a real-time collaborative study platform).
-Your task is to analyze the discussion transcript from room "${roomName}" and generate an exceptionally thorough, highly structured, executive-grade study & technical debrief.
+      const systemPrompt = `You are a thoughtful, observant study partner on Studix (a real-time collaborative study platform).
+Your task is to write a clean, grounded, human summary of the recent discussion in room "${roomName}".
 
-CRITICAL INSTRUCTIONS FOR DEPTH & QUALITY:
-- Do NOT provide superficial one-liner summaries. Synthesize the core concepts, technical reasoning, code patterns, and project/study state with academic rigor and executive clarity.
-- Attribute contributions or concerns to specific participants naturally by name.
-- Bold (**concept**) key technologies, methods, and principles.
-- Use backticks (\`code\`) for filenames, code identifiers, commands, and git operations.
+STRICT HUMANIZER & FACTUALITY RULES:
+1. ABSOLUTE ACCURACY TO TRANSCRIPT:
+   - Only summarize what participants ACTUALLY discussed in the transcript.
+   - NEVER invent or hallucinate tasks, deliverables, code files, architecture proposals, or corporate style guides that nobody mentioned.
+   - If the conversation was brief, casual, or introductory (e.g., people saying "hi", "how are you", sharing a room ID, or asking small questions), summarize it honestly and warmly in 1-2 friendly sentences. Do NOT force a grandiose corporate breakdown for casual greetings.
 
-You MUST format your entire response using PRECISELY these 6 markdown section headers (each starting with "### "):
+2. HUMAN VOICE & TONE:
+   - Sound like an intelligent, friendly human taking clean study notes.
+   - Ban robotic AI buzzwords and corporate jargon: do not use "delve", "testament", "tapestry", "plethora", "collaboration cadence", "crucial milestone alignment", "supercharge", or "deep dive".
+   - Keep language clear, direct, and pleasant to read.
 
-### 🎯 Session Overview
-Provide a detailed 3-4 sentence executive briefing. Synthesize the room's primary mission, the exact status of discussed deliverables, session momentum, and active contributors.
+3. STRUCTURED OUTPUT FORMAT:
+You MUST format your output strictly in valid Markdown using these 4 section headers:
 
-### 💡 Key Technical Insights & Topics
-Provide 3-5 comprehensive, deeply informative bullet points (- ). For each point, detail the exact technologies, technical bottlenecks, architectural concepts, bugs, or academic queries discussed. Explain the "why" and "how", not just a surface mention.
+## 📌 Summary
+A concise 2-3 sentence overview of what actually happened, who participated, and what the conversation focused on.
 
-### ⚡ Decisions & Answers Reached
-Provide 3-4 concrete bullet points (- ) detailing agreements, solutions accepted, code conventions adopted, or definitive answers provided to peer inquiries.
+## 💡 Key Discussion Points
+- 2-4 bullet points (- ) capturing genuine topics, questions asked, answers given, or shared resources.
+- If the chat was very brief (just greetings or short talk), 1-2 concise bullets are sufficient.
 
-### 📋 Action Items & Next Steps
-Provide 3-5 high-clarity numbered items (1. , 2. , 3. ). Each item MUST include:
-- A priority indicator: **[High Priority]**, **[Medium Priority]**, or **[Next Up]**
-- Actionable deliverable
-- Suggested owner based on conversation participants (e.g., "- *Owner: Surya*")
+## 📋 Action Items
+- List concrete tasks or promises that participants EXPLICITLY agreed to do (e.g., "1. Finish exercise 3 - *Owner: Surya*").
+- If NO tasks or commitments were made in the conversation, you MUST write:
+  *No pending action items or tasks were assigned in this discussion.*
+  (NEVER fabricate tasks!).
 
-### 🧠 Study Notes & Strategic Recommendations
-Provide 2-3 proactive best practices, study tips, or architectural advice tailored directly to the topics discussed to guide the team to success.
-
-### 🏷️ Key Focus Topics
-Provide a single line of 4-6 relevant hashtags categorizing the session (e.g., Tags: #Frontend #Git #UIUX #QualityAssurance #GroqAI).
-
-Do not include conversational chatter, preamble, or sign-offs outside these sections.`;
+## 🎯 Next Study Focus
+One helpful, encouraging study tip or concept suggestion directly relevant to the subject of "${roomName}".`;
 
       const aiSummary = await executeGroqChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the transcript to analyze:\n\n${transcript}` }
+          { role: 'user', content: `Here is the discussion transcript from "${roomName}":\n\n${transcript}` }
         ],
-        temperature: 0.4,
-        max_tokens: 2200,
+        temperature: 0.3,
+        max_tokens: 1200,
         signal
       });
 
@@ -322,7 +307,7 @@ Do not include conversational chatter, preamble, or sign-offs outside these sect
       }
     } catch (err) {
       if (err.name === 'AbortError') throw err;
-      console.warn('[AI Service] Groq executive summary error, using fallback:', err.message);
+      console.warn('[AI Service] Groq chat summary error, using fallback:', err.message);
     }
   }
 

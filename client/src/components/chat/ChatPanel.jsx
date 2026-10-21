@@ -2,25 +2,35 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, getServerUrl } from '@/lib/utils';
-import { Send, Image, Paperclip, MoreVertical, Loader2, AlertCircle, Trash2, Smile, Mic, MicOff, Phone, Settings, ChevronDown, CheckCheck, BookOpen, Quote, Code, Reply, FileText, Zap, Sparkles, X, ChevronUp, MessageSquare, Plus } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import {
+  Send,
+  Image,
+  Paperclip,
+  Loader2,
+  Mic,
+  Code,
+  Reply,
+  FileText,
+  Sparkles,
+  X,
+  ChevronUp,
+  Plus
+} from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { TypingIndicator } from './TypingIndicator';
 import { useSocket } from '@/hooks/useSocket';
 import { db, storage } from '@/lib/firebase/config';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { storageService } from '@/lib/storage/storageService';
 import { saveVoice } from '@/services/voiceStorageService';
 import { toast } from 'sonner';
 import { logger } from '@/lib/logger';
-import { fetchMessages, deleteMessageApi } from '@/services/api';
-import { summarizeChatDiscussion, generateAiStudyResponse, generateExecutiveChatSummary } from '@/services/aiService';
+import { fetchMessages } from '@/services/api';
+import { generateExecutiveChatSummary, generateAiStudyResponse } from '@/services/aiService';
 import { ChatSummaryModal } from './ChatSummaryModal';
 import { differenceInMinutes } from 'date-fns';
 
@@ -396,21 +406,35 @@ export function ChatPanel({ roomId, roomData }) {
     const handleAiExplain = (e) => {
       const msg = e.detail?.message;
       if (!msg || !msg.text) return;
-      const rawText = msg.text.trim();
 
-      const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(rawText) || rawText.length <= 4;
-      const isQuestion = rawText.endsWith('?') || /^(what|how|why|when|where|which|who|can|does|is|are)\b/i.test(rawText);
-      const isCode = /[{};=>]|\b(function|const|let|var|class|import|return|error|traceback|def)\b/i.test(rawText);
+      // Clean off existing prompt prefixes and quotation wraps
+      let cleanText = msg.text
+        .replace(/^@ai\s*/gi, '')
+        .replace(/^@studybuddy\s*/gi, '')
+        .replace(/^\/ai\s*/gi, '')
+        .replace(/^Explain this concept clearly with examples:\s*"?/gi, '')
+        .replace(/^Help analyze and debug this code\/error:\s*"?/gi, '')
+        .replace(/^Help answer and break down this question for our study group:\s*"?/gi, '')
+        .replace(/^Explain:\s*"?/gi, '')
+        .replace(/^"?\s*$/g, '')
+        .replace(/"\s*$/g, '')
+        .trim();
+
+      if (!cleanText) return;
+
+      const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(cleanText) || cleanText.length <= 4;
+      const isQuestion = cleanText.endsWith('?') || /^(what|how|why|when|where|which|who|can|does|is|are)\b/i.test(cleanText);
+      const isCode = /[{};=>]|\b(function|const|let|var|class|import|return|error|traceback|def)\b/i.test(cleanText);
 
       let query;
       if (isGreeting) {
         query = `@ai Hey! Greet our study room and suggest a few great topics we can study together today!`;
       } else if (isCode) {
-        query = `@ai Help analyze and debug this code/error: "${rawText.slice(0, 160)}"`;
+        query = `@ai Help analyze and debug this code/error: "${cleanText.slice(0, 160)}"`;
       } else if (isQuestion) {
-        query = `@ai Help answer and break down this question for our study group: "${rawText.slice(0, 160)}"`;
+        query = `@ai Help answer this question for our study group: "${cleanText.slice(0, 160)}"`;
       } else {
-        query = `@ai Explain this concept clearly with examples: "${rawText.slice(0, 160)}"`;
+        query = `@ai Explain: "${cleanText.slice(0, 160)}"`;
       }
 
       sendMessage(query);
@@ -703,10 +727,10 @@ export function ChatPanel({ roomId, roomData }) {
             variant="ghost"
             size="sm"
             onClick={generateSummary}
-            className="h-8 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 hover:text-white text-[11px] font-bold tracking-wide border border-purple-500/30 gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.15)] hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all duration-200"
+            className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-zinc-300 hover:text-white text-xs font-medium border border-white/10 gap-1.5 transition-colors"
           >
-            <Sparkles className="h-3.5 w-3.5 text-purple-400 animate-pulse" />
-            AI Executive Summary
+            <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+            AI Summary
           </Button>
         </div>
       </header>

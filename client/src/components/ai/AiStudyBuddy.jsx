@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, GraduationCap, AlertCircle, RotateCcw, Copy, Check, Lightbulb, Calculator, Code, Brain, HelpCircle, Trash2, BookOpen, ArrowUp, Sparkles, Zap } from 'lucide-react';
+import { Bot, GraduationCap, AlertCircle, RotateCcw, Copy, Check, Lightbulb, Calculator, Code, Brain, HelpCircle, Trash2, BookOpen, Sparkles, Zap } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { db } from '@/lib/firebase/config';
 import {

@@ -419,7 +419,7 @@ export const MessageItem = memo(function MessageItem({
                 "absolute top-[-10px] flex items-center gap-1.5 z-30",
                 isOwn ? "left-[-10px]" : "right-[-10px]"
               )}>
-                {!isAi && message.text && (() => {
+                {!isAi && message.text && !message.text.trim().startsWith('@ai') && !message.text.trim().startsWith('/ai') && (() => {
                   const raw = message.text.trim();
                   const isGreetingMsg = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(raw) || raw.length <= 4;
                   return (
@@ -428,12 +428,12 @@ export const MessageItem = memo(function MessageItem({
                       onClick={(e) => {
                         e.stopPropagation();
                         window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
-                        toast.info(isGreetingMsg ? 'Asking StudyBuddy AI to say hi...' : 'Asking StudyBuddy AI to explain...');
+                        toast.info(isGreetingMsg ? 'Asking StudyBuddy AI...' : 'Asking StudyBuddy AI to explain...');
                       }}
-                      title={isGreetingMsg ? "Say hi with StudyBuddy AI" : "Explain with StudyBuddy AI"}
-                      className="h-6 px-2 rounded-full bg-[#1e1f2b] border border-purple-500/40 flex items-center gap-1 text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all duration-200 shadow-xl text-[10px] font-medium"
+                      title={isGreetingMsg ? "Ask StudyBuddy AI" : "Explain with StudyBuddy AI"}
+                      className="h-6 px-2.5 rounded-full bg-zinc-900/95 border border-white/10 flex items-center gap-1 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all shadow-md text-[11px] font-medium"
                     >
-                      <Sparkles size={11} className="text-purple-400" />
+                      <Sparkles size={11} className="text-indigo-400" />
                       <span>{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
                     </button>
                   );
@@ -446,9 +446,9 @@ export const MessageItem = memo(function MessageItem({
                       handleCopy();
                     }}
                     title="Copy AI response"
-                    className="h-6 px-2 rounded-full bg-[#1e1f2b] border border-purple-500/40 flex items-center gap-1 text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all duration-200 shadow-xl text-[10px] font-medium"
+                    className="h-6 px-2.5 rounded-full bg-zinc-900/95 border border-white/10 flex items-center gap-1 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all shadow-md text-[11px] font-medium"
                   >
-                    <Copy size={11} className="text-purple-400" />
+                    <Copy size={11} className="text-zinc-400" />
                     <span>Copy</span>
                   </button>
                 )}
