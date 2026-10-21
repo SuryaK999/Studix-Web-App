@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { PlaceholdersAndVanishInput } from '@/components/ui/placeholders-and-vanish-input';
 import { fetchMessages } from '@/services/api';
 import { callGroqApi, isGroqConfigured } from '@/services/aiService';
+import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 
 const QUICK_ACTIONS = [
   { icon: BookOpen, label: 'Explain', prompt: 'Explain this topic in simple terms with examples.' },
@@ -37,41 +38,6 @@ const MAX_INPUT_LENGTH = 2_000;
 
 function sanitizeInput(input) {
   return input.replace(/<[^>]*>/g, '').replace(/&[a-z]+;/gi, '').trim().slice(0, MAX_INPUT_LENGTH);
-}
-
-// ─── Markdown Renderer ─────────────────────────────────────────
-function MarkdownContent({ content }) {
-  const rendered = useMemo(() => {
-    const html = content
-      // Code blocks (```lang\ncode```)
-      .replace(/```(\w*)\n?([\s\S]*?)```/g, (_m, lang, code) =>
-        `<pre class="ai-code-block"><code class="lang-${lang || 'text'}">${code.trim()}</code></pre>`)
-      // Inline code
-      .replace(/`([^`]+)`/g, '<code class="ai-inline-code">$1</code>')
-      // Bold
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      // Headers
-      .replace(/^### (.+)$/gm, '<h4 class="ai-h4">$1</h4>')
-      .replace(/^## (.+)$/gm, '<h3 class="ai-h3">$1</h3>')
-      // Numbered lists
-      .replace(/^(\d+)\. (.+)$/gm, '<li class="ai-li-num"><span class="ai-num">$1.</span> $2</li>')
-      // Unordered lists
-      .replace(/^[-•] (.+)$/gm, '<li class="ai-li">$1</li>')
-      // Line breaks (double newline = paragraph)
-      .replace(/\n\n/g, '</p><p class="ai-p">')
-      .replace(/\n/g, '<br/>');
-
-    return `<p class="ai-p">${html}</p>`;
-  }, [content]);
-
-  return (
-    <div
-      className="ai-markdown"
-      dangerouslySetInnerHTML={{ __html: rendered }}
-    />
-  );
 }
 
 // ─── Expert Response Generator ──────────────────────────────────
@@ -107,7 +73,7 @@ async function generateExpertResponse(
         return;
       }
 
-      const input = userInput.toLowerCase();
+      const input = userInput.toLowerCase().trim();
       const hasContext = roomContext.length > 0;
       const prevUserMsgs = messageHistory.filter(m => m.role === 'user').length;
 
@@ -121,20 +87,50 @@ async function generateExpertResponse(
         ? `\n\n---\n*📎 I noticed your group has been ${roomContext.includes('code') ? 'working on code' : roomContext.includes('math') ? 'studying math' : 'discussing topics'} — I can tie this into what you're studying.*`
         : '';
 
+      // ─── 0. Greetings & Casual Interactions (NEVER table or formal definition essay for hi) ────
+      if (/^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(input) || input.length <= 3) {
+        resolve(`### 👋 Hey there!
+
+I'm your **StudyBuddy AI** tutor on Studix. What are we studying or coding today?
+
+Here is what I can help you with:
+- 💡 **Explain a concept:** *"Explain useEffect in React with examples"*
+- 💻 **Debug code:** *"Why is this array mutation causing re-renders?"*
+- ⚖️ **Comparisons:** *"SQL vs MongoDB - which one should I pick?"*
+- 📝 **Take a quiz:** *"Quiz me on JavaScript promises"*
+- 🧠 **Study tips:** *"Best way to prepare for technical interviews"*
+
+Type a question below or pick a quick action above to get started! 🚀${contextRef}`);
+        return;
+      }
+
       // ─── Pattern matching with rich, expert responses ────
 
       if (input.includes('quiz') || input.includes('test me')) {
-        resolve(`${greeting}### 📝 Quick Knowledge Check\n\nLet me quiz you Answer each question, then check below.\n\n**1.** What is the key difference between a stack and a queue?\n\n**2.** Explain the time complexity of binary search.\n\n**3.** What does "DRY" stand for in software engineering?\n\n**4.** Name two benefits of using version control.\n\n**5.** What is the purpose of an API?\n\n---\n\n### ✅ Answers\n\n1. **Stack** = LIFO (Last In, First Out), **Queue** = FIFO (First In, First Out)\n2. **O(log n)** — it halves the search space each step\n3. **Don't Repeat Yourself** — avoid duplicating logic\n4. Collaboration + history tracking\n5. Allows different software to communicate${contextRef}`);
+        resolve(`${greeting}### 📝 Quick Knowledge Check\n\nLet me quiz you! Answer each question, then check below.\n\n**1.** What is the key difference between a stack and a queue?\n\n**2.** Explain the time complexity of binary search.\n\n**3.** What does "DRY" stand for in software engineering?\n\n**4.** Name two benefits of using version control.\n\n**5.** What is the purpose of an API?\n\n---\n\n### ✅ Answers\n\n1. **Stack** = LIFO (Last In, First Out), **Queue** = FIFO (First In, First Out)\n2. **O(log n)** — it halves the search space each step\n3. **Don't Repeat Yourself** — avoid duplicating logic\n4. Collaboration + history tracking\n5. Allows different software to communicate${contextRef}`);
         return;
       }
 
       if (input.includes('explain') || input.includes('what is') || input.includes('how does') || input.includes('define')) {
-        resolve(`${greeting}### 💡 Explanation\n\nGreat question Let me break this down clearly.\n\n**Core Concept:**\nThink of it like building blocks — each concept builds on the previous one.\n\n**Step-by-step:**\n1. Start with the **fundamentals** — what you already know\n2. Connect new information to **real-world examples**\n3. Test your understanding by **explaining it to someone else**\n\n**Key Insight:**\nThe best learners don't just memorize — they understand the *why* behind each concept.\n\n**Example:**\n\`\`\`\nIf you're learning about arrays:\n- Think of them as numbered lockers\n- Each locker (index) holds one item\n- You can access any locker instantly by its number\n\`\`\`\n\n**Pro tip:** Draw a diagram. Visual learners retain 65% more information.\n\nWant me to go deeper into any specific part? 🎯${contextRef}`);
+        const topic = input.replace(/explain\s*(this\s*:?)?/i, '').replace(/concept\s*clearly\s*:?/i, '').replace(/["']/g, '').trim();
+        if (!topic || /^(hi+|hello+|hey+|yo+|sup)\b/i.test(topic) || topic.length <= 3) {
+          resolve(`### 👋 Ready to Study!
+
+Tell me what topic or concept you'd like to explore today! For example:
+- *"Explain closures in JavaScript with code examples"*
+- *"Explain how the event loop works"*
+- *"Explain the difference between TCP and UDP"*
+
+I'll break it down with clear explanations, analogies, and code snippets! 💡${contextRef}`);
+          return;
+        }
+
+        resolve(`${greeting}### 💡 Explanation: ${topic}\n\nLet's break this down clearly step-by-step:\n\n**1. Core Concept:**\n**${topic}** is best understood through its fundamental purpose and real-world behavior.\n\n**2. Real-World Analogy:**\nThink of it like building blocks — each component has a distinct responsibility and connects cleanly with the rest of your system.\n\n**3. Step-by-Step Breakdown:**\n1. Start with the **fundamentals** — what problem does this solve?\n2. Connect the logic to **concrete examples** you encounter when coding or studying.\n3. Test your understanding by **predicting the output or edge cases**.\n\n**4. Key Insight:**\nThe best learners don't just memorize syntax — they understand the *why* behind each design pattern.\n\nWant me to give a code example, quiz you on this, or simplify it further? 🎯${contextRef}`);
         return;
       }
 
       if (input.includes('study tip') || input.includes('how to study') || input.includes('learn better') || input.includes('focus')) {
-        resolve(`${greeting}### 🧠 Evidence-Based Study Techniques\n\nHere's what research says actually works:\n\n**Tier 1 — Most Effective:**\n\n1. **Active Recall** — Close the book, write down everything you remember\n   - *Why it works:* Forces your brain to retrieve, strengthening neural pathways\n\n2. **Spaced Repetition** — Review at increasing intervals (1 day → 3 days → 7 days → 14 days)\n   - *Why it works:* Fights the forgetting curve\n\n3. **Feynman Technique** — Explain it like you're teaching a child\n   - *Why it works:* Exposes gaps in understanding immediately\n\n**Tier 2 — Support Techniques:**\n\n- ⏱️ **Pomodoro** — 25 min deep focus → 5 min break → repeat\n- 🎯 **Interleaving** — Mix different topics instead of studying one thing for hours\n- 📝 **Elaboration** — Ask "why?" and "how?" about everything\n\n**Your Study Schedule Template:**\n\`\`\`\n📅 Day 1: Learn + take handwritten notes\n📅 Day 2: Active recall (no notes allowed)\n📅 Day 4: Practice problems\n📅 Day 7: Teach it to someone\n📅 Day 14: Final review\n\`\`\`\n\nYou've got this Start with just ONE technique today. 💪${contextRef}`);
+        resolve(`${greeting}### 🧠 Evidence-Based Study Techniques\n\nHere's what research says actually works:\n\n**Tier 1 — Most Effective:**\n\n1. **Active Recall** — Close the book, write down everything you remember\n   - *Why it works:* Forces your brain to retrieve, strengthening neural pathways\n\n2. **Spaced Repetition** — Review at increasing intervals (1 day → 3 days → 7 days → 14 days)\n   - *Why it works:* Fights the forgetting curve\n\n3. **Feynman Technique** — Explain it like you're teaching a child\n   - *Why it works:* Exposes gaps in understanding immediately\n\n**Tier 2 — Support Techniques:**\n\n- ⏱️ **Pomodoro** — 25 min deep focus → 5 min break → repeat\n- 🎯 **Interleaving** — Mix different topics instead of studying one thing for hours\n- 📝 **Elaboration** — Ask "why?" and "how?" about everything\n\n**Your Study Schedule Template:**\n\`\`\`\n📅 Day 1: Learn + take handwritten notes\n📅 Day 2: Active recall (no notes allowed)\n📅 Day 4: Practice problems\n📅 Day 7: Teach it to someone\n📅 Day 14: Final review\n\`\`\`\n\nYou've got this! Start with just ONE technique today. 💪${contextRef}`);
         return;
       }
 
@@ -411,23 +407,28 @@ export function AiStudyBuddy({ roomId }) {
           <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[#09090b] to-transparent z-20 pointer-events-none md:hidden" />
           <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[#09090b] to-transparent z-20 pointer-events-none md:hidden" />
           
-          <div className="w-full flex items-center gap-1 p-1 rounded-xl bg-[#09090b]/40 backdrop-blur-sm overflow-x-auto no-scrollbar scroll-smooth">
+          <div className="w-full flex items-center gap-1.5 p-1 rounded-xl bg-[#09090b]/40 backdrop-blur-sm overflow-x-auto no-scrollbar scroll-smooth">
             {QUICK_ACTIONS.map((action, index) => (
               <button
                 key={index}
-                onClick={() => sendMessage(action.prompt)}
+                onClick={() => {
+                  const currentInput = input.trim();
+                  if (currentInput) {
+                    if (action.label === 'Explain') sendMessage(`Explain this topic clearly with examples: "${currentInput}"`);
+                    else if (action.label === 'Code Help') sendMessage(`Help me understand and debug this code: "${currentInput}"`);
+                    else if (action.label === 'Quiz Me') sendMessage(`Quiz me on "${currentInput}" with questions and answers.`);
+                    else if (action.label === 'Simplify') sendMessage(`Break this down simply in beginner-friendly terms: "${currentInput}"`);
+                    else if (action.label === 'Practice') sendMessage(`Give me a practice problem with step-by-step solution for: "${currentInput}"`);
+                    else sendMessage(`Give me proven study techniques for: "${currentInput}"`);
+                  } else {
+                    sendMessage(action.prompt);
+                  }
+                }}
                 disabled={isLoading}
-                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-4 py-1.5 md:py-2.5 text-[11px] md:text-xs lg:text-sm font-medium text-[#a1a1aa] hover:text-[#d8b4fe] rounded-lg transition-all hover:bg-[#c084fc]/10 whitespace-nowrap disabled:opacity-50 flex-shrink-0"
+                className="flex items-center gap-1.5 md:gap-2 px-2.5 md:px-3.5 py-1.5 md:py-2 text-[11px] md:text-xs font-medium text-[#a1a1aa] hover:text-[#d8b4fe] rounded-lg transition-all hover:bg-[#c084fc]/10 whitespace-nowrap disabled:opacity-50 flex-shrink-0 border border-white/5"
               >
-                <action.icon className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                <span className="hidden xl:inline">{action.label}</span>
-                <span className="hidden sm:inline xl:hidden">
-                  {action.label === 'Explain' ? 'Explain' : 
-                   action.label === 'Study Tips' ? 'Tips' : 
-                   action.label === 'Practice' ? 'Prac' : 
-                   action.label === 'Code Help' ? 'Code' : 
-                   action.label === 'Quiz Me' ? 'Quiz' : 'Simplify'}
-                </span>
+                <action.icon className="h-3.5 w-3.5 md:h-4 md:w-4 text-purple-400" />
+                <span>{action.label}</span>
               </button>
             ))}
           </div>
@@ -445,63 +446,85 @@ export function AiStudyBuddy({ roomId }) {
 
       {/* 3. Main Content */}
       <ScrollArea className="flex-1 min-h-0 relative z-10 w-full" ref={scrollRef}>
-        <div className="p-6 md:p-8 max-w-4xl mx-auto flex flex-col justify-end min-h-full">
+        <div className="p-4 md:p-8 max-w-4xl mx-auto flex flex-col justify-end min-h-full">
           {messages.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center min-h-[300px] text-center px-4">
               <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 shadow-[0_0_20px_rgba(168,85,247,0.15)]">
+                  <Bot className="w-6 h-6" />
+                </div>
                 <h1 className="text-xl font-bold tracking-tight text-white/90">
                   StudyBuddy AI
                 </h1>
-                <p className="text-[#a1a1aa] text-sm max-w-[300px] mx-auto">
-                  How can I help you study today?
+                <p className="text-[#a1a1aa] text-sm max-w-[340px] mx-auto leading-relaxed">
+                  Your patient academic tutor. Ask any concept, debug code, or pick a quick action above.
                 </p>
               </div>
             </div>
           ) : (
-            <div className="space-y-8">
+            <div className="space-y-6">
               {messages.map((message) => (
-                <div key={message.id} className={`flex gap-5 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                  {/* Avatar */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 shadow-sm ${
-                    message.role === 'assistant'
-                      ? 'bg-[#c084fc]/20 text-[#c084fc]'
-                      : 'bg-[#27272a] text-[#a1a1aa]'
-                  }`}>
-                    {message.role === 'assistant' ? (
-                      <Bot className="h-4 w-4" />
-                    ) : (
-                      <span className="text-xs font-medium">{user?.displayName?.[0] || 'U'}</span>
-                    )}
-                  </div>
+                <div key={message.id} className="w-full">
+                  {message.role === 'assistant' ? (
+                    <div className="flex gap-3 md:gap-4 items-start w-full group">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0 mt-1 shadow-md shadow-purple-500/10">
+                        <Bot className="h-4 w-4 text-purple-300" />
+                      </div>
 
-                  {/* Message Content */}
-                  <div className={`max-w-[85%] text-[15px] leading-relaxed ${message.role === 'user' ? 'flex flex-col items-end' : ''}`}>
-                    <div className="text-[#e4e4e7]">
-                      {message.role === 'assistant' ? (
-                        <div className="group relative">
-                          <MarkdownContent content={message.content} />
-                          <div className="absolute top-0 right-full pr-3 opacity-0 group-hover:opacity-100 transition-opacity">
-                             <button onClick={() => handleCopy(message.content, message.id)} className="p-1.5 text-[#52525b] hover:text-[#a1a1aa] rounded-md hover:bg-[#27272a] transition-all">
-                               {copiedId === message.id ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                             </button>
+                      <div className="flex-1 min-w-0 bg-[#12131c]/90 backdrop-blur-md border border-purple-500/20 hover:border-purple-500/30 transition-all rounded-2xl p-4 md:p-5 shadow-[0_4px_24px_rgba(147,51,234,0.06)] relative">
+                        <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-white/[0.06]">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs md:text-sm font-bold text-purple-200">StudyBuddy AI</span>
+                            <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/30 flex items-center gap-1">
+                              <Sparkles className="w-2.5 h-2.5 text-purple-400" /> AI TUTOR
+                            </span>
                           </div>
+                          <button
+                            onClick={() => handleCopy(message.content, message.id)}
+                            className="p-1 px-2 text-white/50 hover:text-white rounded-md hover:bg-white/5 transition-all text-xs flex items-center gap-1.5 border border-white/5"
+                            title="Copy response"
+                          >
+                            {copiedId === message.id ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                <span className="text-[11px] text-emerald-400 font-semibold">Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5 text-purple-300" />
+                                <span className="text-[11px] text-white/70">Copy</span>
+                              </>
+                            )}
+                          </button>
                         </div>
-                      ) : (
-                        <span className="whitespace-pre-wrap">{message.content}</span>
-                      )}
+
+                        <div className="text-[#e4e4e7] overflow-hidden">
+                          <MarkdownRenderer content={message.content || message.text || ''} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="flex gap-3 justify-end items-start w-full">
+                      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-[0_4px_16px_rgba(113,72,235,0.25)] max-w-[85%] md:max-w-[75%] border border-white/10">
+                        <p className="text-[13.5px] md:text-[14px] leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                      </div>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-sm mt-1">
+                        {user?.displayName?.[0] || 'U'}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
               
               {/* Typing indicator */}
               {isLoading && (
-                <div className="flex gap-5">
-                  <div className="w-8 h-8 rounded-full bg-[#c084fc]/20 text-[#c084fc] flex items-center justify-center mt-1 shrink-0">
-                    <Bot className="h-4 w-4" />
+                <div className="flex gap-3 md:gap-4 items-center">
+                  <div className="w-8 h-8 rounded-full bg-[#c084fc]/20 text-[#c084fc] flex items-center justify-center shrink-0 shadow-sm">
+                    <Bot className="h-4 w-4 text-purple-300 animate-pulse" />
                   </div>
-                  <div className="text-[#a1a1aa] text-[15px] flex items-center">
-                    Thinking...
+                  <div className="bg-[#12131c]/60 border border-purple-500/20 rounded-2xl px-4 py-2.5 text-purple-300 text-xs flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
+                    <span>StudyBuddy is thinking and synthesizing...</span>
                   </div>
                 </div>
               )}
@@ -510,7 +533,7 @@ export function AiStudyBuddy({ roomId }) {
               {hasError && (
                 <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm">
                   <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <span className="text-red-400 flex-1">Something went wrong. Try again?</span>
+                  <span className="text-red-400 flex-1">Unable to generate response. Try again?</span>
                   <button onClick={handleRetry} className="text-red-400 hover:text-red-300 font-medium flex items-center gap-1">
                     <RotateCcw className="h-3 w-3" /> Retry
                   </button>
@@ -522,7 +545,7 @@ export function AiStudyBuddy({ roomId }) {
       </ScrollArea>
 
       {/* 4. Dynamic Input Area */}
-      <div className="shrink-0 p-6 relative z-10 w-full max-w-4xl mx-auto">
+      <div className="shrink-0 p-4 md:p-6 relative z-10 w-full max-w-4xl mx-auto">
         <PlaceholdersAndVanishInput
           placeholders={[
             "What's the difference between a stack and a queue?",
@@ -536,24 +559,6 @@ export function AiStudyBuddy({ roomId }) {
           onSubmit={(e) => { e && e.preventDefault && e.preventDefault(); sendMessage(); }}
         />
       </div>
-
-      {/* Styles for markdown rendering */}
-      <style>{`
-        .ai-markdown { line-height: 1.7; color: #e4e4e7; }
-        .ai-markdown .ai-p { margin: 0 0 1rem 0; }
-        .ai-markdown .ai-p:last-child { margin-bottom: 0; }
-        .ai-markdown .ai-h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem 0; color: #ffffff; }
-        .ai-markdown .ai-h4 { font-size: 1rem; font-weight: 600; margin: 1.25rem 0 0.5rem 0; color: #ffffff; }
-        .ai-markdown strong { font-weight: 600; color: #ffffff; }
-        .ai-markdown em { font-style: italic; color: #a1a1aa; }
-        .ai-markdown .ai-li { margin-left: 1.5rem; position: relative; margin-bottom: 0.6rem; }
-        .ai-markdown .ai-li::before { content: "•"; position: absolute; left: -1.2rem; color: #a1a1aa; }
-        .ai-markdown .ai-li-num { margin-left: 1.5rem; margin-bottom: 0.6rem; }
-        .ai-markdown .ai-num { color: #a1a1aa; font-weight: 500; }
-        .ai-markdown .ai-inline-code { background: #27272a; padding: 0.2rem 0.4rem; border-radius: 4px; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; color: #d8b4fe; }
-        .ai-markdown .ai-code-block { background: #000000; border: 1px solid #27272a; border-radius: 8px; padding: 1rem; margin: 1rem 0; overflow-x: auto; font-size: 0.85em; font-family: 'SF Mono', 'Fira Code', monospace; line-height: 1.5; color: #e4e4e7; }
-        .ai-markdown hr { border: none; border-top: 1px solid #27272a; margin: 1.5rem 0; }
-      `}</style>
     </div>
   );
 }

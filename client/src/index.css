@@ -483,6 +483,31 @@ textarea:focus-visible {
   }
 }
 
+/* Studix AI Markdown Enhancements */
+.studix-markdown {
+  word-break: break-word;
+}
+.studix-markdown table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.studix-markdown th:first-child {
+  border-top-left-radius: 8px;
+}
+.studix-markdown th:last-child {
+  border-top-right-radius: 8px;
+}
+.studix-markdown tr:last-child td:first-child {
+  border-bottom-left-radius: 8px;
+}
+.studix-markdown tr:last-child td:last-child {
+  border-bottom-right-radius: 8px;
+}
+.studix-markdown p:empty {
+  display: none;
+}
+
 @media print {
   /* Override dark theme globally during print */
   html.print-mode,

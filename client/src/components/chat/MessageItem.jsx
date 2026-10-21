@@ -15,6 +15,7 @@ import { getVoiceUrl } from '@/services/voiceStorageService';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useUsersStore } from '@/store/usersStore';
+import { MarkdownRenderer } from './MarkdownRenderer';
 
 export const MessageItem = memo(function MessageItem({
   message, isOwn, canDelete, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
@@ -277,39 +278,8 @@ export const MessageItem = memo(function MessageItem({
 
         <div className="relative">
           {isAi ? (
-            <div className="space-y-2 text-[14.2px] leading-relaxed pr-14">
-              {message.text.split('\n\n').map((para, i) => {
-                const trimmed = para.trim();
-                if (trimmed.startsWith('### ')) {
-                  return (
-                    <h4 key={i} className="text-[13.5px] font-bold text-purple-300 mt-2 mb-1 flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                      {trimmed.replace(/^###\s+/, '')}
-                    </h4>
-                  );
-                }
-                if (trimmed.startsWith('```')) {
-                  const code = trimmed.replace(/^```[a-z]*\n?/i, '').replace(/\n?```$/, '');
-                  return (
-                    <pre key={i} className="bg-black/40 border border-purple-500/20 rounded-lg p-2.5 text-xs font-mono text-purple-200 overflow-x-auto my-1.5">
-                      <code>{code}</code>
-                    </pre>
-                  );
-                }
-                return (
-                  <p key={i} className="whitespace-pre-wrap">
-                    {trimmed.split(/(\*\*.*?\*\*|`.*?`)/g).map((part, j) => {
-                      if (part.startsWith('**') && part.endsWith('**')) {
-                        return <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>;
-                      }
-                      if (part.startsWith('`') && part.endsWith('`')) {
-                        return <code key={j} className="bg-black/30 text-purple-300 px-1 py-0.5 rounded text-xs font-mono">{part.slice(1, -1)}</code>;
-                      }
-                      return part;
-                    })}
-                  </p>
-                );
-              })}
+            <div className="text-[13.5px] md:text-[14px] leading-relaxed pr-6 pb-2 min-w-[260px] overflow-hidden">
+              <MarkdownRenderer content={message.text} />
             </div>
           ) : (
             <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap">{message.text}</p>
@@ -364,7 +334,7 @@ export const MessageItem = memo(function MessageItem({
         )}
       </div>
 
-      <div className={cn("flex flex-col max-w-[85%] md:max-w-[70%]", isOwn ? "items-end" : "items-start")}>
+      <div className={cn("flex flex-col", isAi ? "max-w-[96%] md:max-w-[85%]" : (isOwn ? "max-w-[85%] md:max-w-[70%]" : "max-w-[85%] md:max-w-[70%]"), isOwn ? "items-end" : "items-start")}>
         {isFirstInGroup && !isOwn && (
           <div className="flex items-center gap-2 mb-1 ml-1 scale-in-center overflow-hidden">
             <span className={cn(
@@ -449,19 +419,37 @@ export const MessageItem = memo(function MessageItem({
                 "absolute top-[-10px] flex items-center gap-1.5 z-30",
                 isOwn ? "left-[-10px]" : "right-[-10px]"
               )}>
-                {!isAi && message.text && (
+                {!isAi && message.text && (() => {
+                  const raw = message.text.trim();
+                  const isGreetingMsg = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(raw) || raw.length <= 4;
+                  return (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
+                        toast.info(isGreetingMsg ? 'Asking StudyBuddy AI to say hi...' : 'Asking StudyBuddy AI to explain...');
+                      }}
+                      title={isGreetingMsg ? "Say hi with StudyBuddy AI" : "Explain with StudyBuddy AI"}
+                      className="h-6 px-2 rounded-full bg-[#1e1f2b] border border-purple-500/40 flex items-center gap-1 text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all duration-200 shadow-xl text-[10px] font-medium"
+                    >
+                      <Sparkles size={11} className="text-purple-400" />
+                      <span>{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
+                    </button>
+                  );
+                })()}
+                {isAi && message.text && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
-                      toast.info('Asking StudyBuddy AI to explain...');
+                      handleCopy();
                     }}
-                    title="Explain with StudyBuddy AI"
+                    title="Copy AI response"
                     className="h-6 px-2 rounded-full bg-[#1e1f2b] border border-purple-500/40 flex items-center gap-1 text-purple-300 hover:text-white hover:bg-purple-600/40 transition-all duration-200 shadow-xl text-[10px] font-medium"
                   >
-                    <Sparkles size={11} className="text-purple-400" />
-                    <span>Explain</span>
+                    <Copy size={11} className="text-purple-400" />
+                    <span>Copy</span>
                   </button>
                 )}
                 <button

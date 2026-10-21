@@ -391,13 +391,29 @@ export function ChatPanel({ roomId, roomData }) {
     }
   }, [inputText, user, roomId, socket, isLoading, replyTarget, messages, scrollToBottom]);
 
-  // Handle "Explain with AI" triggered from message items
+  // Handle contextual AI assistance triggered from message items
   useEffect(() => {
     const handleAiExplain = (e) => {
       const msg = e.detail?.message;
       if (!msg || !msg.text) return;
-      const explainQuery = `@ai Explain this concept clearly: "${msg.text.slice(0, 160)}"`;
-      sendMessage(explainQuery);
+      const rawText = msg.text.trim();
+
+      const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(rawText) || rawText.length <= 4;
+      const isQuestion = rawText.endsWith('?') || /^(what|how|why|when|where|which|who|can|does|is|are)\b/i.test(rawText);
+      const isCode = /[{};=>]|\b(function|const|let|var|class|import|return|error|traceback|def)\b/i.test(rawText);
+
+      let query;
+      if (isGreeting) {
+        query = `@ai Hey! Greet our study room and suggest a few great topics we can study together today!`;
+      } else if (isCode) {
+        query = `@ai Help analyze and debug this code/error: "${rawText.slice(0, 160)}"`;
+      } else if (isQuestion) {
+        query = `@ai Help answer and break down this question for our study group: "${rawText.slice(0, 160)}"`;
+      } else {
+        query = `@ai Explain this concept clearly with examples: "${rawText.slice(0, 160)}"`;
+      }
+
+      sendMessage(query);
     };
 
     window.addEventListener('studix:ai-explain', handleAiExplain);
@@ -916,6 +932,7 @@ export function ChatPanel({ roomId, roomData }) {
         }}
         roomName={roomName}
         messageCount={messages.length}
+        messages={messages}
       />
     </div>
   );
