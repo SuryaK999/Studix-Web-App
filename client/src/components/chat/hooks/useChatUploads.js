@@ -118,7 +118,9 @@ export function useChatUploads(roomId, user, socket, setMessages) {
     const toastId = toast.loading('Sending voice message...');
 
     try {
-      const { id, url } = await saveVoice(audioBlob);
+      const safeDuration = Math.max(1, Math.round(Number(recordingDuration) || 1));
+      const { id, url } = await saveVoice(audioBlob, { roomId, userId: user.uid });
+      const ext = (audioBlob.type || '').includes('mp4') ? 'mp4' : (audioBlob.type || '').includes('ogg') ? 'ogg' : 'webm';
 
       const payload = {
         tempId:         `temp-${Date.now()}`,
@@ -127,14 +129,14 @@ export function useChatUploads(roomId, user, socket, setMessages) {
         voice: {
           id,
           url,
-          duration: recordingDuration,
+          duration: safeDuration,
         },
         fileUrl:        url,
         voiceUrl:       url,
-        fileName:       `voice-${id}.webm`,
+        fileName:       `voice-${id}.${ext}`,
         fileSize:       audioBlob.size,
-        fileDuration:   recordingDuration,
-        voiceDuration:  recordingDuration,
+        fileDuration:   safeDuration,
+        voiceDuration:  safeDuration,
         senderId:       user.uid,
         senderName:     user.displayName || 'Anonymous',
         senderPhotoURL: user.photoURL,
