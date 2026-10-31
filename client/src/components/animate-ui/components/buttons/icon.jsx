@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { cva } from 'class-variance-authority';
-import { Button } from '@/components/animate-ui/primitives/buttons/button';
+import { Button as ButtonPrimitive } from '@/components/animate-ui/primitives/buttons/button';
 import { cn } from '@/lib/utils';
 import {
   Particles,
