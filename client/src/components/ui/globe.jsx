@@ -49,8 +49,6 @@ export function Globe({
 }) {
   const { theme } = useGlobalTheme();
   const config = theme === 'light' ? LIGHT_CONFIG : DARK_CONFIG;
-  let phi = 0
-  let width = 0
   const canvasRef = useRef(null)
   const pointerInteracting = useRef(null)
   const pointerInteractionMovement = useRef(0)
@@ -78,6 +76,8 @@ export function Globe({
   };
 
   useEffect(() => {
+    let phi = 0;
+    let width = 0;
     let globe = null;
     let frameId;
 
