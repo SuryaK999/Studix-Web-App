@@ -3,9 +3,12 @@ import { cn } from '@/lib/utils';
 
 /**
  * StudyBuddyIcon
- * Modern, bespoke vector SVG intelligence glyph inspired by premier AI tools (Claude, Gemini, Copilot).
- * Styled with Studix's signature violet / purple / indigo gradient palette.
- * Crisp and legible at 12px, 14px, 16px, 20px, 24px, 32px, 48px.
+ * Bespoke, modern AI assistant vector glyph inspired by premier modern AI tools
+ * (Anthropic Claude's radiant intelligence core, Google Gemini's precision diamond nexus,
+ * and Copilot's continuous neural gradient ribbons).
+ *
+ * Meticulously crafted for Studix's signature violet / electric purple / deep indigo palette.
+ * Crisp, legible, and balanced at 12px, 14px, 16px, 18px, 20px, 24px, 32px, 48px, and 64px.
  *
  * @param {'gradient' | 'monochrome' | 'glow'} [variant='gradient']
  * @param {number | string} [size=20]
@@ -19,7 +22,7 @@ export function StudyBuddyIcon({
   ...props
 }) {
   const rawId = useId();
-  // Sanitize id for SVG attribute selectors
+  // Sanitize id for SVG gradient definitions
   const id = rawId.replace(/[^a-zA-Z0-9-_]/g, '');
 
   const gradPrimary = `sb-pri-${id}`;
@@ -27,6 +30,7 @@ export function StudyBuddyIcon({
   const gradCore = `sb-core-${id}`;
   const gradGlow = `sb-glow-${id}`;
   const gradSatellite = `sb-sat-${id}`;
+  const gradOrbit = `sb-orb-${id}`;
 
   const dimension = typeof size === 'number' ? `${size}px` : size;
 
@@ -46,25 +50,26 @@ export function StudyBuddyIcon({
         aria-hidden="true"
         {...props}
       >
-        {/* Subtle filled background silhouette */}
+        {/* Harmonic 45° faceted intelligence rays */}
         <path
-          d="M12 2C12.8 7.3 16.7 11.2 22 12C16.7 12.8 12.8 16.7 12 22C11.2 16.7 7.3 12.8 2 12C7.3 11.2 11.2 7.3 12 2Z"
+          d="M12 4.2C12.6 7.8 15.8 11 19.5 11.6C15.8 12.2 12.6 15.4 12 19C11.4 15.4 8.2 12.2 4.5 11.6C8.2 11 11.4 7.8 12 4.2Z"
           fill="currentColor"
-          fillOpacity="0.18"
+          fillOpacity="0.4"
+          transform="rotate(45 12 12)"
         />
-        {/* Sharp vector outline */}
+        {/* Primary 4-pointed precision intelligence nexus */}
         <path
-          d="M12 2C12.8 7.3 16.7 11.2 22 12C16.7 12.8 12.8 16.7 12 22C11.2 16.7 7.3 12.8 2 12C7.3 11.2 11.2 7.3 12 2Z"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinejoin="round"
+          d="M12 1.8C12.7 7 16.8 11.1 22 11.8C16.8 12.5 12.7 16.6 12 21.8C11.3 16.6 7.2 12.5 2 11.8C7.2 11.1 11.3 7 12 1.8Z"
+          fill="currentColor"
         />
-        {/* Inner neural spark */}
-        <circle cx="12" cy="12" r="1.6" fill="currentColor" />
+        {/* Core neural aperture */}
+        <circle cx="12" cy="11.8" r="2.2" fill="currentColor" fillOpacity="0.2" />
+        <circle cx="12" cy="11.8" r="1.1" fill="currentColor" />
         {/* Companion satellite spark */}
         <path
-          d="M19.5 2.5C19.7 3.6 20.4 4.3 21.5 4.5C20.4 4.7 19.7 5.4 19.5 6.5C19.3 5.4 18.6 4.7 17.5 4.5C18.6 4.3 19.3 3.6 19.5 2.5Z"
+          d="M19.8 2.2C20 3.2 20.7 3.9 21.8 4.1C20.7 4.3 20 5 19.8 6C19.6 5 18.9 4.3 17.8 4.1C18.9 3.9 19.6 3.2 19.8 2.2Z"
           fill="currentColor"
+          fillOpacity="0.9"
         />
       </svg>
     );
@@ -86,86 +91,110 @@ export function StudyBuddyIcon({
       {...props}
     >
       <defs>
-        {/* Primary Studix Violet / Electric Purple / Indigo Gradient */}
+        {/* Studix signature electric violet to indigo gradient */}
         <linearGradient id={gradPrimary} x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#C084FC" />
-          <stop offset="45%" stopColor="#8B5CF6" />
-          <stop offset="80%" stopColor="#6366F1" />
+          <stop offset="0%" stopColor="#E879F9" />
+          <stop offset="35%" stopColor="#C084FC" />
+          <stop offset="70%" stopColor="#8B5CF6" />
           <stop offset="100%" stopColor="#4F46E5" />
         </linearGradient>
 
-        {/* Secondary Radiant Diagonal Wings (Magenta to Cyan Accent) */}
+        {/* Secondary radiant diagonal rays (sky cyan to magenta) */}
         <linearGradient id={gradSecondary} x1="22" y1="2" x2="2" y2="22" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F472B6" />
-          <stop offset="50%" stopColor="#A855F7" />
-          <stop offset="100%" stopColor="#38BDF8" />
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="40%" stopColor="#A855F7" />
+          <stop offset="100%" stopColor="#EC4899" />
         </linearGradient>
 
-        {/* Core Luminous Specular Node */}
-        <radialGradient id={gradCore} cx="12" cy="12" r="3" gradientUnits="userSpaceOnUse">
+        {/* Core luminous specular node */}
+        <radialGradient id={gradCore} cx="12" cy="11.8" r="3.2" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#FFFFFF" />
-          <stop offset="55%" stopColor="#E9D5FF" />
-          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.8" />
+          <stop offset="45%" stopColor="#F3E8FF" />
+          <stop offset="85%" stopColor="#C084FC" />
+          <stop offset="100%" stopColor="#7C3AED" stopOpacity="0.9" />
         </radialGradient>
 
-        {/* Satellite Spark Gradient */}
-        <linearGradient id={gradSatellite} x1="17.5" y1="2" x2="21.5" y2="6.5" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#F472B6" />
-          <stop offset="100%" stopColor="#C084FC" />
+        {/* Ambient soft glow aura */}
+        <radialGradient id={gradGlow} cx="12" cy="12" r="11" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#A855F7" stopOpacity="0.5" />
+          <stop offset="65%" stopColor="#6366F1" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="#4F46E5" stopOpacity="0" />
+        </radialGradient>
+
+        {/* Neural orbital ribbon gradient */}
+        <linearGradient id={gradOrbit} x1="5" y1="6" x2="19" y2="18" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.8" />
+          <stop offset="50%" stopColor="#C084FC" stopOpacity="0.6" />
+          <stop offset="100%" stopColor="#F43F5E" stopOpacity="0.75" />
         </linearGradient>
 
-        {/* Ambient Soft Glow */}
-        <radialGradient id={gradGlow} cx="12" cy="12" r="10" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#A855F7" stopOpacity="0.45" />
-          <stop offset="100%" stopColor="#6366F1" stopOpacity="0" />
-        </radialGradient>
+        {/* Satellite spark gradient */}
+        <linearGradient id={gradSatellite} x1="17.8" y1="2.2" x2="21.8" y2="6" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#38BDF8" />
+          <stop offset="50%" stopColor="#C084FC" />
+          <stop offset="100%" stopColor="#F472B6" />
+        </linearGradient>
       </defs>
 
       {/* Ambient Radial Aura for 'glow' variant */}
       {variant === 'glow' && (
-        <circle cx="12" cy="12" r="9.5" fill={`url(#${gradGlow})`} />
+        <circle cx="12" cy="12" r="10.5" fill={`url(#${gradGlow})`} />
       )}
 
-      {/* Secondary Layer: Rotated 45° faceted sub-petals (Claude / Copilot multi-lobe depth) */}
+      {/* Layer 1: 45° Faceted Intelligence Wings (Claude / Gemini multi-lobe harmonic depth) */}
       <path
-        d="M12 4.2C12.6 8 16 11.4 19.8 12C16 12.6 12.6 16 12 19.8C11.4 16 8 12.6 4.2 12C8 11.4 11.4 8 12 4.2Z"
+        d="M12 4.2C12.6 7.8 15.8 11 19.5 11.6C15.8 12.2 12.6 15.4 12 19C11.4 15.4 8.2 12.2 4.5 11.6C8.2 11 11.4 7.8 12 4.2Z"
         fill={`url(#${gradSecondary})`}
-        fillOpacity="0.55"
+        fillOpacity="0.58"
         transform="rotate(45 12 12)"
       />
 
-      {/* Primary Layer: 4-pointed Curved Intelligence Nexus (Gemini / Claude sleek geometry) */}
+      {/* Layer 2: Primary 4-pointed Precision Intelligence Nexus (Gemini / Claude sleek geometry) */}
       <path
-        d="M12 2C12.8 7.3 16.7 11.2 22 12C16.7 12.8 12.8 16.7 12 22C11.2 16.7 7.3 12.8 2 12C7.3 11.2 11.2 7.3 12 2Z"
+        d="M12 1.8C12.7 7 16.8 11.1 22 11.8C16.8 12.5 12.7 16.6 12 21.8C11.3 16.6 7.2 12.5 2 11.8C7.2 11.1 11.3 7 12 1.8Z"
         fill={`url(#${gradPrimary})`}
       />
 
-      {/* Subtle Inner Glass Prism Facet Refraction */}
+      {/* Layer 3: Glass Prism Facet Refraction Highlight */}
       <path
-        d="M12 6.5C12.5 9.2 14.8 11.5 17.5 12C14.8 12.5 12.5 14.8 12 17.5C11.5 14.8 9.2 12.5 6.5 12C9.2 11.5 11.5 9.2 12 6.5Z"
+        d="M12 6.2C12.4 8.8 14.8 11.1 17.5 11.6C14.8 12.1 12.4 14.4 12 17C11.6 14.4 9.2 12.1 6.5 11.6C9.2 11.1 11.6 8.8 12 6.2Z"
         fill="#FFFFFF"
-        fillOpacity="0.22"
+        fillOpacity="0.24"
       />
 
-      {/* Brilliant Neural Core */}
-      <circle cx="12" cy="12" r="2.2" fill={`url(#${gradCore})`} />
-      <circle cx="12" cy="12" r="0.9" fill="#FFFFFF" />
+      {/* Layer 4: Continuous Neural Orbital Ring (Copilot / OpenAI ribbon loop aesthetic) */}
+      <ellipse
+        cx="12"
+        cy="11.8"
+        rx="7.5"
+        ry="2.8"
+        transform="rotate(-28 12 11.8)"
+        stroke={`url(#${gradOrbit})`}
+        strokeWidth="1.1"
+        strokeDasharray="2.5 1.5"
+        strokeOpacity="0.7"
+      />
 
-      {/* Satellite Dynamic Energy Spark (Top Right) */}
+      {/* Layer 5: Brilliant Neural Core Node */}
+      <circle cx="12" cy="11.8" r="2.2" fill={`url(#${gradCore})`} />
+      <circle cx="12" cy="11.8" r="0.9" fill="#FFFFFF" />
+
+      {/* Layer 6: Satellite Intelligence Spark (Top Right) */}
       <path
-        d="M19.5 2C19.75 3.3 20.7 4.25 22 4.5C20.7 4.75 19.75 5.7 19.5 7C19.25 5.7 18.3 4.75 17 4.5C18.3 4.25 19.25 3.3 19.5 2Z"
+        d="M19.8 2.2C20 3.2 20.7 3.9 21.8 4.1C20.7 4.3 20 5 19.8 6C19.6 5 18.9 4.3 17.8 4.1C18.9 3.9 19.6 3.2 19.8 2.2Z"
         fill={`url(#${gradSatellite})`}
       />
 
-      {/* Micro Energy Spark (Bottom Left) */}
-      <circle cx="4.5" cy="19.5" r="1.1" fill={`url(#${gradSecondary})`} fillOpacity="0.85" />
+      {/* Layer 7: Micro Energy Spark (Bottom Left) */}
+      <circle cx="4.2" cy="19.2" r="1" fill="#38BDF8" fillOpacity="0.8" />
     </svg>
   );
 }
 
 /**
  * StudyBuddyAvatar
- * Glassmorphic container with custom size, squircle / circle geometry, and subtle purple aura.
+ * Modern squircle / circular glassmorphic avatar with ambient aura,
+ * inner glass reflection, and Studix's signature violet gradient.
  */
 export function StudyBuddyAvatar({
   size = 'md', // 'xs' (20px) | 'sm' (24px) | 'md' (32px) | 'lg' (40px) | 'xl' (48px)
@@ -191,17 +220,17 @@ export function StudyBuddyAvatar({
         "relative flex items-center justify-center shrink-0 select-none overflow-hidden",
         config.container,
         config.rounded,
-        "bg-gradient-to-br from-[#1d1635] via-[#141524] to-[#0c0d15]",
-        "border border-purple-500/30",
-        "shadow-[0_2px_12px_rgba(113,72,235,0.2)]",
-        glow && "shadow-[0_0_20px_rgba(168,85,247,0.32)] ring-1 ring-purple-400/40",
+        "bg-gradient-to-br from-[#1e1438] via-[#141525] to-[#0c0d15]",
+        "border border-purple-500/35",
+        "shadow-[0_2px_12px_rgba(113,72,235,0.22)]",
+        glow && "shadow-[0_0_22px_rgba(168,85,247,0.36)] ring-1 ring-purple-400/40",
         pulse && "animate-pulse",
         className
       )}
       {...props}
     >
-      {/* Sleek top glass reflection highlight */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.12] via-transparent to-transparent pointer-events-none rounded-[inherit]" />
+      {/* Top glass reflection highlight */}
+      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.14] via-transparent to-transparent pointer-events-none rounded-[inherit]" />
       <StudyBuddyIcon size={config.icon} variant="gradient" />
     </div>
   );
@@ -209,7 +238,7 @@ export function StudyBuddyAvatar({
 
 /**
  * StudyBuddyMentionBadge
- * Formats inline mentions (@ai, @studybuddy) inside chat bubbles.
+ * Formats inline mentions (@ai, @studybuddy, /ai) inside chat messages.
  */
 export function StudyBuddyMentionBadge({ text = '@ai', className = '' }) {
   return (
@@ -231,9 +260,14 @@ export function StudyBuddyMentionBadge({ text = '@ai', className = '' }) {
 
 /**
  * StudyBuddyNavIcon
- * Monochrome channel icon wrapper for sidebar navigation items.
+ * Adaptive channel icon wrapper for sidebar navigation items.
  */
-export function StudyBuddyNavIcon({ className = '', size = 18 }) {
-  return <StudyBuddyIcon size={size} variant="monochrome" className={className} />;
+export function StudyBuddyNavIcon({ className = '', size = 18, isActive = false }) {
+  return (
+    <StudyBuddyIcon
+      size={size}
+      variant={isActive ? 'gradient' : 'monochrome'}
+      className={className}
+    />
+  );
 }
-
