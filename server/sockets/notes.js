@@ -30,7 +30,7 @@ function registerNotesHandlers(socket, io) {
             { upsert: true, new: true }
           );
           
-          socket.emit('notes:saved', { roomId, at: new Date().toISOString() });
+          io.to(roomId).emit('notes:saved', { roomId, at: new Date().toISOString() });
         } catch (err) {
           console.error(`[Notes] Save failed for room ${roomId}:`, err.message);
           socket.emit('notes:save_error', { roomId });
