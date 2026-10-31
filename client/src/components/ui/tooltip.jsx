@@ -1,112 +1,37 @@
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { Slot } from "@radix-ui/react-slot";
+import * as React from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
+import { cn } from '@/lib/utils';
 
-const TooltipContext = React.createContext(null);
+export const TooltipProvider = TooltipPrimitive.Provider;
 
-function useTooltip() {
-  const context = React.useContext(TooltipContext);
-  if (!context) {
-    throw new Error("Tooltip components must be wrapped in <Tooltip>");
-  }
-  return context;
-}
+export const Tooltip = TooltipPrimitive.Root;
 
-export function Tooltip({ children, delay = 200 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <TooltipContext.Provider value={{ isOpen, setIsOpen, delay }}>
-      <div
-        className="relative inline-flex"
-        onMouseEnter={() => setIsOpen(true)}
-        onMouseLeave={() => setIsOpen(false)}
-        onFocus={() => setIsOpen(true)}
-        onBlur={() => setIsOpen(false)}
-      >
-        {children}
-      </div>
-    </TooltipContext.Provider>
-  );
-}
+export const TooltipTrigger = TooltipPrimitive.Trigger;
 
-export function TooltipTrigger({
-  children,
-  className,
-  asChild,
-}) {
-  const Comp = asChild ? Slot : "div";
-  return (
-    <Comp className={cn("inline-flex items-center justify-center", className)}>
-      {children}
-    </Comp>
-  );
-}
-
-export function TooltipPanel({
-  children,
-  className,
-  side = "top",
-  align: _align = "center",
-  hidden = false,
-  ...props
-}) {
-  const { isOpen, delay } = useTooltip();
-
-  if (hidden) return null;
-
-  const getVariant = () => {
-    switch (side) {
-      case "top":
-        return { initial: { opacity: 0, y: 10, scale: 0.95 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: 5, scale: 0.95 } };
-      case "bottom":
-        return { initial: { opacity: 0, y: -10, scale: 0.95 }, animate: { opacity: 1, y: 0, scale: 1 }, exit: { opacity: 0, y: -5, scale: 0.95 } };
-      case "left":
-        return { initial: { opacity: 0, x: 10, scale: 0.95 }, animate: { opacity: 1, x: 0, scale: 1 }, exit: { opacity: 0, x: 5, scale: 0.95 } };
-      case "right":
-        return { initial: { opacity: 0, x: -10, scale: 0.95 }, animate: { opacity: 1, x: 0, scale: 1 }, exit: { opacity: 0, x: 5, scale: 0.95 } };
-    }
-  };
-
-  const positioning = {
-    top: "bottom-full left-1/2 -translate-x-1/2 mb-2",
-    bottom: "top-full left-1/2 -translate-x-1/2 mt-2",
-    left: "right-full top-1/2 -translate-y-1/2 mr-2",
-    right: "left-full top-1/2 -translate-y-1/2 ml-2",
-  };
-
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={getVariant().initial}
-          animate={getVariant().animate}
-          exit={getVariant().exit}
-          transition={{ duration: 0.15, ease: "easeOut", delay: delay / 1000 }}
+export const TooltipContent = React.forwardRef(
+  ({ className, side = 'bottom', sideOffset = 6, align = 'center', hidden = false, children, ...props }, ref) => {
+    if (hidden) return null;
+    return (
+      <TooltipPrimitive.Portal>
+        <TooltipPrimitive.Content
+          ref={ref}
+          side={side}
+          align={align}
+          sideOffset={sideOffset}
           className={cn(
-            "absolute z-50 whitespace-nowrap px-3 py-1.5 text-sm font-medium",
-            "bg-zinc-900 dark:bg-zinc-100 text-zinc-50 dark:text-zinc-900 rounded-lg shadow-xl",
-            "border border-zinc-800 dark:border-zinc-200 pointer-events-none",
-            positioning[side] || positioning.top,
+            'z-[9999] overflow-hidden rounded-lg border border-white/10 bg-[#12131e]/95 backdrop-blur-xl px-2.5 py-1 text-xs font-medium text-zinc-100 shadow-2xl select-none pointer-events-none',
+            'animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
+            'data-[side=bottom]:slide-in-from-top-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1',
             className
           )}
           {...props}
         >
           {children}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-// ─── Radix-compat aliases required by ui/sidebar.tsx ────────────────────────
-// The sidebar component imports { TooltipProvider, TooltipContent } from here.
-// We re-export compatible wrappers so the rest of the app keeps working.
+        </TooltipPrimitive.Content>
+      </TooltipPrimitive.Portal>
+    );
+  }
+);
+TooltipContent.displayName = TooltipPrimitive.Content.displayName;
 
-export function TooltipProvider({
-  children,
-  delayDuration: _delay,
-}) {
-  return <>{children}</>;
-}
-
-export const TooltipContent = TooltipPanel;
+export const TooltipPanel = TooltipContent;
