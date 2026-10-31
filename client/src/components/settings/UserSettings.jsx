@@ -69,13 +69,7 @@ export function UserSettings({ open, onOpenChange, roomId }) {
   
   const { theme: globalTheme, setTheme: setGlobalTheme } = useGlobalTheme();
 
-  let roomThemeCtrl = null;
-  try {
-    
-    roomThemeCtrl = useStudyRoomTheme();
-  } catch {
-    
-  }
+  const roomThemeCtrl = useStudyRoomTheme();
   
   const activeRoomTheme = roomThemeCtrl?.roomTheme;
   const setRoomTheme = roomThemeCtrl?.setRoomTheme;
