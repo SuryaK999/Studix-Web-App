@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Socket } from 'socket.io-client';
 import { socketService } from '@/lib/socket';
 import { useAuth } from '@/context/AuthContext';
 import { logger } from '@/lib/logger';
@@ -16,6 +15,21 @@ export function useSocket(roomId) {
     let mounted = true;
     let currentSocket = null;
 
+    const onDisconnect = () => {
+      if (mounted) setIsConnected(false);
+    };
+
+    const onRateLimited = ({ message }) => {
+      toast.warning(message || 'You are sending messages too fast.');
+    };
+
+    const onConnect = () => {
+      if (mounted) {
+        setIsConnected(true);
+        currentSocket?.emit('room:join', { roomId });
+      }
+    };
+
     const initSocket = async () => {
       try {
         currentSocket = await socketService.connect();
@@ -27,40 +41,25 @@ export function useSocket(roomId) {
         currentSocket.emit('room:join', { roomId });
         socketService.trackRoomJoin(roomId);
 
-        currentSocket.on('connect', () => {
-          setIsConnected(true);
-          
-          currentSocket?.emit('room:join', { roomId });
-        });
-
-        const onDisconnect = () => setIsConnected(false);
-
-        const onRateLimited = ({ message }) => {
-          toast.warning(message || 'You are sending messages too fast.');
-        };
-
-        currentSocket.on('disconnect',           onDisconnect);
-        currentSocket.on('chat:rate_limited',    onRateLimited);
-
-        return () => {
-          currentSocket?.off('connect');
-          currentSocket?.off('disconnect',        onDisconnect);
-          currentSocket?.off('chat:rate_limited', onRateLimited);
-        };
+        currentSocket.on('connect', onConnect);
+        currentSocket.on('disconnect', onDisconnect);
+        currentSocket.on('chat:rate_limited', onRateLimited);
       } catch (err) {
         logger.error('Failed to initialize socket', 'useSocket', err);
       }
     };
 
-    const cleanupListeners = initSocket();
+    void initSocket();
 
     return () => {
       mounted = false;
       if (currentSocket) {
+        currentSocket.off('connect', onConnect);
+        currentSocket.off('disconnect', onDisconnect);
+        currentSocket.off('chat:rate_limited', onRateLimited);
         currentSocket.emit('room:leave', { roomId });
         socketService.trackRoomLeave(roomId);
       }
-      cleanupListeners.then(cleanup => cleanup?.());
     };
   }, [roomId, user]);
 
