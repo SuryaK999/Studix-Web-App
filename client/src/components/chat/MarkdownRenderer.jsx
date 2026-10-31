@@ -13,7 +13,6 @@ import {
   Brain,
   BookOpen,
   Scale,
-  Sparkles,
   HelpCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
