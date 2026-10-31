@@ -1,5 +1,0 @@
-export const SCROLL_CONFIG = {
-  THROTTLE_MS: 16,
-  NEAR_EDGE_OFFSET: 80,
-  EASE_DURATION: 220,
-};
