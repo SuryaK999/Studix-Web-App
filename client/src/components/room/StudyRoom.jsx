@@ -11,7 +11,7 @@ import {
   Settings, Plus, Bot, 
   BookOpen, Mic, Hash, LogOut,
   PanelLeftClose, PanelRightClose, PanelLeft, PanelRight,
-  Loader2, Search, Compass, Sparkles, Check, ArrowRight,
+  Loader2, Search, Compass, Check, ArrowRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -359,12 +359,38 @@ function StudyRoomContent({ roomId, onLeave }) {
                     : "text-[#5D5F69] hover:bg-white/[0.03] hover:text-[#A1A3AB]"
                 )}
               >
-                <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive ? "text-[#A1A3AB]" : "text-[#4A4D57] group-hover:text-[#6F7483]")} />
-                <span className="text-[13.5px] font-semibold tracking-tight truncate">
+                {item.id === 'ai' ? (
+                  <StudyBuddyIcon
+                    size={18}
+                    variant={isActive ? "gradient" : "monochrome"}
+                    className={cn(
+                      "shrink-0 transition-all duration-200",
+                      isActive
+                        ? "drop-shadow-[0_0_8px_rgba(168,85,247,0.5)] scale-105"
+                        : "text-[#4A4D57] group-hover:text-purple-300"
+                    )}
+                  />
+                ) : (
+                  <item.icon className={cn("w-[18px] h-[18px] shrink-0", isActive ? "text-[#A1A3AB]" : "text-[#4A4D57] group-hover:text-[#6F7483]")} />
+                )}
+                <span className={cn(
+                  "text-[13.5px] font-semibold tracking-tight truncate",
+                  item.id === 'ai' && isActive && "text-purple-200"
+                )}>
                   {item.label}
                 </span>
                 {item.id === 'chat' && isActive && (
                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/20" />
+                )}
+                {item.id === 'ai' && (
+                  <span className={cn(
+                    "ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider transition-all",
+                    isActive
+                      ? "bg-purple-500/25 text-purple-300 border border-purple-500/40 shadow-[0_0_8px_rgba(168,85,247,0.25)]"
+                      : "bg-white/[0.04] text-[#6F7483] group-hover:text-zinc-300 border border-white/5"
+                  )}>
+                    AI
+                  </span>
                 )}
               </button>
             );
@@ -467,7 +493,7 @@ function StudyRoomContent({ roomId, onLeave }) {
             {activeTab === 'notes' ? (
               <BookOpen className="w-4 h-4 text-purple-400" />
             ) : activeTab === 'ai' ? (
-              <StudyBuddyIcon size={16} variant="gradient" className="shrink-0 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
+              <StudyBuddyIcon size={18} variant="gradient" className="shrink-0 drop-shadow-[0_0_10px_rgba(168,85,247,0.55)]" />
             ) : activeTab === 'voice' ? (
               <Mic className="w-4 h-4 text-emerald-400" />
             ) : (
