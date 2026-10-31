@@ -1,10 +1,24 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Bot, AlertCircle, RotateCcw, Copy, Check, Lightbulb,
-  Calculator, Code, Brain, HelpCircle, Trash2, BookOpen, Sparkles, Zap,
-  Send, BookmarkPlus, ArrowUp
+  Bot,
+  AlertCircle,
+  RotateCcw,
+  Copy,
+  Check,
+  Lightbulb,
+  Calculator,
+  Code as CodeIcon,
+  Brain,
+  HelpCircle,
+  Trash2,
+  BookOpen,
+  Sparkles,
+  Zap,
+  BookmarkPlus,
+  ArrowUp,
+  Square
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/hooks/useSocket';
@@ -25,12 +39,13 @@ import { toast } from 'sonner';
 import { fetchMessages, fetchNote } from '@/services/api';
 import { callGroqApi, isGroqConfigured } from '@/services/aiService';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
+import { Tip } from '@/components/ui/tip';
 
 const QUICK_ACTIONS = [
   { icon: BookOpen, label: 'Explain', prompt: 'Explain this topic clearly with intuitive analogies and concrete examples.' },
   { icon: Lightbulb, label: 'Study Tips', prompt: 'Give me proven study techniques and memory cues for this subject.' },
   { icon: Calculator, label: 'Practice', prompt: 'Give me a practice problem with a step-by-step solution.' },
-  { icon: Code, label: 'Code Help', prompt: 'Help me understand and debug this code concept with syntax examples.' },
+  { icon: CodeIcon, label: 'Code Help', prompt: 'Help me understand and debug this code concept with syntax examples.' },
   { icon: Brain, label: 'Quiz Me', prompt: 'Quiz me on this topic with 5 active-recall questions and hidden answers.' },
   { icon: HelpCircle, label: 'Simplify (ELI5)', prompt: 'Break this down simply as if I were a beginner.' },
 ];
@@ -39,11 +54,11 @@ const STARTER_CARDS = [
   {
     icon: BookOpen,
     title: 'Explain a Concept',
-    description: 'Break down complex algorithms, theory, or formulas with simple analogies.',
+    description: 'Break down complex algorithms, theory, or formulas with intuitive analogies.',
     prompt: 'Explain how React reconciliation and the Virtual DOM work with clear analogies and examples.',
   },
   {
-    icon: Code,
+    icon: CodeIcon,
     title: 'Debug & Analyze Code',
     description: 'Find tricky runtime bugs, analyze edge cases, or evaluate Big-O complexity.',
     prompt: 'Help me analyze the time and space complexity of merge sort vs quicksort, and when to use each.',
@@ -57,14 +72,14 @@ const STARTER_CARDS = [
   {
     icon: Lightbulb,
     title: 'Study Strategy Plan',
-    description: 'Build an evidence-based roadmap using spaced repetition and Feynman technique.',
+    description: 'Build an evidence-based roadmap using spaced repetition and the Feynman technique.',
     prompt: 'Create a 7-day study plan using spaced repetition and active recall for my upcoming exam.',
   },
 ];
 
 // ─── Production Guards ──────────────────────────────────────────
 const AI_TIMEOUT_MS = 15_000;
-const RATE_LIMIT_MS = 2_000;
+const RATE_LIMIT_MS = 1_500;
 const MAX_INPUT_LENGTH = 2_000;
 
 function sanitizeInput(input) {
@@ -97,7 +112,7 @@ async function generateExpertResponse(
   }
 
   return new Promise((resolve, reject) => {
-    const delay = 500 + Math.random() * 500;
+    const delay = 450 + Math.random() * 400;
     const timer = setTimeout(() => {
       if (signal?.aborted) {
         reject(new DOMException('AI request aborted', 'AbortError'));
@@ -109,30 +124,30 @@ async function generateExpertResponse(
 
       // Build context reference
       const contextRef = hasContext
-        ? `\n\n---\n*📎 I noticed your room has been ${roomContext.includes('code') ? 'collaborating on code' : roomContext.includes('math') ? 'working on math problems' : 'discussing topics'} — I can tie our study directly into that.*`
+        ? `\n\n---\n*Context from your study room has been referenced for this session.*`
         : '';
 
       // ─── 0. Greetings & Casual Interactions ───────────────────
       if (/^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(input) || input.length <= 3) {
-        resolve(`### 👋 Hey there!
+        resolve(`### Welcome to StudyBuddy
 
-I'm your **StudyBuddy AI** tutor on Studix. What topic, concept, or code are we mastering today?
+I'm your **StudyBuddy AI** mentor on Studix. What topic, concept, or code are we mastering today?
 
 Here are quick ways I can help:
-- 💡 **Concept Breakdown:** *"Explain how async/await works under the hood"*
-- 💻 **Debugging Code:** *"Why is my recursive function causing a stack overflow?"*
-- 📝 **Practice Quiz:** *"Quiz me on operating system thread scheduling"*
-- 🧠 **Study Strategy:** *"Best way to memorize data structures for interviews"*
+- **Concept Breakdown:** *"Explain how async/await works under the hood"*
+- **Debugging Code:** *"Why is my recursive function causing a stack overflow?"*
+- **Practice Quiz:** *"Quiz me on operating system thread scheduling"*
+- **Study Strategy:** *"Best way to memorize data structures for interviews"*
 
-Type a question below or tap any accelerator chip to get started! 🚀${contextRef}`);
+Type a question below or choose an accelerator chip to begin.${contextRef}`);
         return;
       }
 
       // ─── 1. Quizzes ──────────────────────────────────────────
       if (input.includes('quiz') || input.includes('test me')) {
-        resolve(`### 📝 Quick Knowledge Check
+        resolve(`### Knowledge Check
 
-Let's test your understanding with active recall! Try answering before checking:
+Let's test your understanding with active recall. Try answering before checking:
 
 **1.** What is the key difference between a stack and a queue?
 **2.** Explain the average and worst-case time complexity of binary search.
@@ -142,118 +157,93 @@ Let's test your understanding with active recall! Try answering before checking:
 
 ---
 
-### ✅ Answers & Explanations
+### Answers & Explanations
 
-1. **Stack** = LIFO (Last In, First Out) like a stack of plates; **Queue** = FIFO (First In, First Out) like a line of people.
-2. **O(log n)** — it divides the search space in half at each step.
-3. **Don't Repeat Yourself** — prevents duplicated logic and reduces bugs during updates.
-4. **Synchronous** blocks execution until finished; **asynchronous** allows other tasks to run while waiting.
-5. **Indexing** creates a fast lookup data structure (usually a B-Tree) to avoid costly full table scans.${contextRef}`);
+1. **Stack** = LIFO (Last In, First Out); **Queue** = FIFO (First In, First Out).
+2. **O(log n)** — it divides the search space in half at each iteration.
+3. **Don't Repeat Yourself** — eliminates duplicate logic and reduces maintenance bugs.
+4. **Synchronous** blocks execution until finished; **asynchronous** allows other tasks to proceed while waiting.
+5. **Indexing** creates an optimized lookup data structure (typically a B-Tree) to avoid costly full table scans.${contextRef}`);
         return;
       }
 
       // ─── 2. Explanations ──────────────────────────────────────
       if (input.includes('explain') || input.includes('what is') || input.includes('how does') || input.includes('define')) {
         const topic = input.replace(/explain\s*(this\s*:?)?/i, '').replace(/concept\s*clearly\s*:?/i, '').replace(/["']/g, '').trim() || 'the concept';
-        resolve(`### 💡 Deep Dive: ${topic}
+        resolve(`### Deep Dive: ${topic}
 
 Let's break this down into clear, memorable principles:
 
-**1. The Big Picture (Why it exists):**
-**${topic}** exists to solve a specific engineering or academic problem by providing predictable structure and modularity.
+1. **Core Purpose:**
+Understanding what specific challenge **${topic}** solves gives you the mental anchor to recall its mechanisms effortlessly.
 
-**2. Intuitive Real-World Analogy:**
-Imagine an organized kitchen where every chef has a dedicated workstation:
-- Inputs arrive in a known, validated format.
-- Operations run in orderly, isolated steps without side effects.
-- Outputs are clean and ready for the next stage of the pipeline.
+2. **Step-by-Step Logic:**
+- Formulate the fundamental inputs and boundary conditions.
+- Trace the internal transformations state-by-state.
+- Verify the terminal or expected outcome.
 
-**3. Key Takeaways to Remember:**
-- **Separation of Concerns:** Keep distinct responsibilities separated.
-- **Predictability:** Given the same inputs, you should always expect the same outputs.
-- **Edge Cases:** Always consider what happens when data is empty, null, or out of order.
-
-Would you like me to write a **code example**, give you a **practice challenge**, or **simplify this further**? 🎯${contextRef}`);
+3. **Key Takeaway:**
+Focus on the underlying principle rather than memorizing isolated syntax.${contextRef}`);
         return;
       }
 
-      // ─── 3. Code Help & Debugging ─────────────────────────────
-      if (input.includes('code') || input.includes('debug') || input.includes('error') || input.includes('syntax') || input.includes('bug')) {
-        resolve(`### 💻 Code Help & Systematic Debugging
+      // ─── 3. Code & Debugging ──────────────────────────────────
+      if (input.includes('code') || input.includes('debug') || input.includes('error') || input.includes('bug')) {
+        resolve(`### Code & Debugging Assistant
 
-Here is a senior engineer's 3-step checklist for diagnosing issues:
+Here is a systematic diagnostic approach to resolve code issues:
 
-**Step 1: Read the Exact Error & Stack Trace**
-Errors tell you the exact file and line number:
-- \`TypeError: Cannot read properties of undefined\` → An object was accessed before it finished loading or was initialized.
-- \`ReferenceError\` → A variable is misspelled, out of scope, or not imported.
+1. **Stack Trace Isolation:** Pinpoint the exact line number where the anomaly originates.
+2. **State Inspection:** Verify variable types and nullability before dereferencing properties.
+3. **Boundary Verification:** Test arrays for out-of-bound indices and asynchronous race conditions.
 
-**Step 2: Isolate the Data Flow**
 \`\`\`javascript
-// Add clean inspection logs before the crash
-console.log('Input data:', input);
-console.log('Current state:', state);
+// Safe defensive pattern
+if (!data || typeof data !== 'object') {
+  console.warn('Received invalid payload:', data);
+  return fallbackValue;
+}
 \`\`\`
 
-**Step 3: Common Pitfalls & Fixes**
-| Bug Pattern | Root Cause | Solution |
-| :--- | :--- | :--- |
-| **State out of sync** | Direct object/array mutation | Use immutable updates \`[...prev, item]\` |
-| **Missing async data** | Component rendered before fetch resolved | Add optional chaining \`data?.property\` |
-| **Infinite loop** | Missing base case or missing useEffect deps | Verify base condition and dependency array |
-
-Share your exact code snippet and error message, and I'll debug it step-by-step with you! 🔍${contextRef}`);
+Share your exact code snippet and error message, and we'll analyze it step-by-step.${contextRef}`);
         return;
       }
 
       // ─── 4. Study Tips & Strategy ─────────────────────────────
       if (input.includes('study tip') || input.includes('how to study') || input.includes('learn better') || input.includes('focus')) {
-        resolve(`### 🧠 Evidence-Based Study Blueprint
+        resolve(`### Evidence-Based Study Blueprint
 
-Cognitive science shows that passive re-reading has near-zero retention. Here are the top 3 high-yield techniques:
+Cognitive research demonstrates that passive re-reading has low retention. Here are three high-yield techniques:
 
 **1. Active Recall (Testing Effect)**
-- Close your notes and write everything you can remember on a blank sheet.
-- *Why:* Neural pathways are strengthened during retrieval, not passive reading.
+Close your notes and write everything you can remember from scratch. Neural pathways strengthen during retrieval, not passive consumption.
 
-**2. Spaced Repetition (Combating the Forgetting Curve)**
-\`\`\`
-Day 1: Learn core concepts + write summary notes
-Day 2: 10-minute active recall quiz (no looking)
-Day 4: Solve 3 difficult practice problems
-Day 7: Explain the concept aloud (Feynman technique)
-Day 14: Final high-speed review
-\`\`\`
+**2. Spaced Repetition (Forgetting Curve)**
+- Day 1: Learn core concepts and draft summary notes.
+- Day 2: 10-minute active recall quiz.
+- Day 4: Solve 3 challenging practice problems.
+- Day 7: Explain the concept aloud using the Feynman technique.
 
 **3. The Feynman Technique**
-- Explain the concept out loud in plain English as if teaching a beginner.
-- Any time you hesitate or use jargon, you've located a gap in your knowledge.
-
-Pick **just one technique** to apply to your study session today! 💪${contextRef}`);
+Explain the concept in plain English as if teaching a beginner. Any hesitation indicates an exact gap in your foundational understanding.${contextRef}`);
         return;
       }
 
       // ─── 5. General Pedagogical Fallback ─────────────────────
       const topic = userInput.trim();
-      resolve(`### 💡 Study Insight: ${topic}
+      resolve(`### Study Insight: ${topic}
 
-Here is a clear, structured breakdown to help you master this:
+Here is a structured breakdown to master this topic:
 
 **1. Core Intuition:**
-At its core, **${topic}** provides a structured way to handle logic and state with predictability and clarity.
+At its foundation, **${topic}** provides a predictable pattern to manage logic and structure cleanly.
 
-**2. Key Principles to Master:**
-- **Understand the Purpose:** Always ask *what problem does this solve?* before memorizing syntax or equations.
-- **Trace the Mechanics:** Break down complex mechanisms into sequential, bite-sized stages.
-- **Test with Boundary Cases:** Test what happens with zero, null, negative, or concurrent inputs.
+**2. Principles to Master:**
+- **Clarify the Problem:** Understand what difficulty exists without this concept.
+- **Trace the Mechanics:** Deconstruct complex mechanisms into bite-sized sequential stages.
+- **Test Edge Cases:** Evaluate behavior with zero, null, or extreme values.
 
-**3. Next Step:**
-Would you like me to:
-- 💡 Provide a **code or calculation example**?
-- 📝 Give you an **active-recall quiz** on this?
-- 🧒 Explain it in **simpler, beginner-friendly terms**?
-
-Let me know how you'd like to proceed! 🌟${contextRef}`);
+What aspect would you like to explore next? You can ask for a code example, a practice quiz, or a simplified analogy.${contextRef}`);
     }, delay);
 
     signal?.addEventListener('abort', () => {
@@ -279,7 +269,7 @@ function markdownToNotesHtml(markdown) {
 
   // Extract a clean topic header
   const firstHeadingMatch = md.match(/^#+\s*(.+)$/m);
-  const title = firstHeadingMatch ? firstHeadingMatch[1].replace(/[*_~`]/g, '').trim() : 'AI Study Takeaway';
+  const title = firstHeadingMatch ? firstHeadingMatch[1].replace(/[*_~`]/g, '').trim() : 'Study Note';
 
   // Protect and extract code blocks
   const codeBlocks = [];
@@ -369,7 +359,7 @@ function markdownToNotesHtml(markdown) {
   }
   closeLists();
 
-  return `<div class="ai-study-note"><h3>💡 StudyBuddy AI: ${title}</h3>${htmlParts.join('')}</div>`;
+  return `<div class="ai-study-note"><h3>StudyBuddy: ${title}</h3>${htmlParts.join('')}</div>`;
 }
 
 // ─── Main Component ───────────────────────────────────────────────
@@ -381,7 +371,8 @@ export function AiStudyBuddy({ roomId }) {
     if (!roomId) return [];
     try {
       const cached = localStorage.getItem(`studix_ai_${roomId}`);
-      return cached ? JSON.parse(cached) : [];
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -394,7 +385,7 @@ export function AiStudyBuddy({ roomId }) {
   const [copiedId, setCopiedId] = useState(null);
 
   const lastAssistantIndex = useMemo(
-    () => messages.map((m) => m.role).lastIndexOf('assistant'),
+    () => (Array.isArray(messages) ? messages.map((m) => m?.role).lastIndexOf('assistant') : -1),
     [messages]
   );
 
@@ -406,7 +397,7 @@ export function AiStudyBuddy({ roomId }) {
 
   // Sync cache with local storage
   useEffect(() => {
-    if (roomId && messages.length > 0) {
+    if (roomId && Array.isArray(messages) && messages.length > 0) {
       try {
         localStorage.setItem(`studix_ai_${roomId}`, JSON.stringify(messages.slice(-50)));
       } catch (_) {}
@@ -454,12 +445,14 @@ export function AiStudyBuddy({ roomId }) {
     let cancelled = false;
 
     fetchMessages(roomId)
-      .then(({ messages: roomMsgs }) => {
-        if (cancelled || !roomMsgs || roomMsgs.length === 0) return;
+      .then((response) => {
+        if (cancelled) return;
+        const roomMsgs = Array.isArray(response) ? response : (response?.messages || []);
+        if (!roomMsgs || roomMsgs.length === 0) return;
         const textSnippets = roomMsgs
-          .filter((m) => m.text && !m.text.startsWith('Voice message'))
+          .filter((m) => m && m.text && !m.text.startsWith('Voice message'))
           .slice(-10)
-          .map((m) => `${m.senderName}: ${m.text}`);
+          .map((m) => `${m.senderName || 'Member'}: ${m.text}`);
         setContext(textSnippets.join(' | '));
       })
       .catch(() => {});
@@ -513,7 +506,7 @@ export function AiStudyBuddy({ roomId }) {
 
       const now = Date.now();
       if (now - lastSendTimeRef.current < RATE_LIMIT_MS) {
-        toast.info('Please wait a moment before sending another question.');
+        toast.info('Please wait a moment before sending another query.');
         return;
       }
 
@@ -563,6 +556,15 @@ export function AiStudyBuddy({ roomId }) {
     [input, user, context, messages, persistMessage]
   );
 
+  const handleStopGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      setAiState('idle');
+      sendingRef.current = false;
+      toast.info('Response stopped');
+    }
+  }, []);
+
   const handleRetry = useCallback(() => {
     if (lastFailedInput) sendMessage(lastFailedInput);
   }, [lastFailedInput, sendMessage]);
@@ -582,19 +584,20 @@ export function AiStudyBuddy({ roomId }) {
     try {
       if (!roomId) return;
       toast.info('Saving to Collaborative Notes...');
-      const { content: currentHtml } = await fetchNote(roomId).catch(() => ({ content: '' }));
-      
+      const noteData = await fetchNote(roomId).catch(() => ({ content: '' }));
+      const currentHtml = noteData?.content || '';
+
       const cleanHtml = markdownToNotesHtml(content);
       const mergedHtml = currentHtml ? `${currentHtml}<br/><hr/><br/>${cleanHtml}` : cleanHtml;
 
       if (socket) {
         socket.emit('notes:update', { roomId, content: mergedHtml });
       }
-      toast.success('Appended to Room Collaborative Notes 📝');
+      toast.success('Saved to room notes');
     } catch (err) {
       console.warn('Failed to append to notes:', err);
       await navigator.clipboard.writeText(content);
-      toast.success('Copied response to clipboard!');
+      toast.success('Copied response to clipboard');
     }
   }, [roomId, socket]);
 
@@ -616,199 +619,203 @@ export function AiStudyBuddy({ roomId }) {
   const isLoading = aiState === 'sending';
   const hasError = aiState === 'error';
 
+  // Condition to check if user has started typing
+  const isTyping = input.trim().length > 0;
+
   return (
     <div
       id={`ai-tutor-${roomId}`}
       data-radial-context="tutor"
       className="flex flex-col h-full bg-[#09090b] relative overflow-hidden font-sans select-text"
     >
-      {/* Subtle radial glow of deep purple in the center */}
-      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
+      {/* Subtle modern radial glow */}
+      <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.06)_0%,_transparent_65%)]" />
 
-      {/* ── 1. Refined, Clean Top Bar ── */}
-      <header className="relative z-10 flex items-center justify-between h-14 md:h-16 px-4 md:px-6 shrink-0 border-b border-[#27272a]/30 bg-[#09090b]/80 backdrop-blur-xl">
+      {/* ── 1. Modern 2026 Minimalist Top Bar ── */}
+      <header className="relative z-10 flex items-center justify-between h-14 px-4 md:px-6 shrink-0 border-b border-white/[0.08] bg-[#0c0d12]/90 backdrop-blur-xl">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 flex items-center justify-center text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.15)] shrink-0">
-            <Bot className="w-4 h-4 text-purple-300" />
+          <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-200 shadow-sm shrink-0">
+            <Sparkles className="w-4 h-4 text-purple-400" />
           </div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="font-bold text-white text-sm md:text-base tracking-tight whitespace-nowrap">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-zinc-100 text-sm tracking-tight whitespace-nowrap">
               StudyBuddy AI
             </h2>
             {isGroqConfigured() ? (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-black text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 rounded-full tracking-wider uppercase shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <Zap className="w-2.5 h-2.5 text-emerald-400" />
-                GROQ AI • LIVE
+                Groq Llama 3.3
               </span>
             ) : (
-              <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-bold text-purple-300 bg-purple-500/10 border border-purple-500/30 rounded-full tracking-wider uppercase">
-                OFFLINE TUTOR
+              <span className="inline-flex items-center px-2 py-0.5 text-[9.5px] font-medium text-zinc-400 bg-white/[0.04] border border-white/10 rounded-full">
+                Offline Tutor
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {context && (
-            <div
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 max-w-[220px] truncate"
-              title={`Context aware of current room discussions:\n${context}`}
-            >
-              <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
-              <span className="truncate">Room Context Active</span>
-            </div>
+            <Tip label="Context aware of recent room discussions" side="bottom">
+              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 max-w-[200px] truncate cursor-help">
+                <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
+                <span className="truncate">Room Context Active</span>
+              </div>
+            </Tip>
           )}
 
-          <button
-            onClick={handleClearChat}
-            className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors shrink-0"
-            title="Clear Chat History"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <Tip label="Clear conversation history" side="bottom">
+            <button
+              onClick={handleClearChat}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </Tip>
         </div>
       </header>
 
-      {/* ── 2. Message History & Empty State ── */}
+      {/* ── 2. Message History & 2026 ChatGPT Canvas ── */}
       <ScrollArea className="flex-1 min-h-0 relative z-10 w-full" ref={scrollRef}>
-        <div className="p-4 md:p-6 max-w-4xl mx-auto flex flex-col justify-end min-h-full">
+        <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col justify-end min-h-full">
           {messages.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[420px] text-center px-4 py-8">
+            /* Modern ChatGPT / Claude Empty State Hero */
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[460px] text-center px-4 py-8">
               <motion.div
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="flex flex-col items-center gap-4 max-w-xl w-full"
               >
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500/25 to-indigo-500/25 border border-purple-500/30 flex items-center justify-center text-purple-300 shadow-[0_0_30px_rgba(168,85,247,0.2)]">
-                  <Bot className="w-7 h-7" />
+                <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-200 shadow-xl">
+                  <Sparkles className="w-6 h-6 text-purple-400" />
                 </div>
-                <div className="space-y-1.5">
-                  <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white">
-                    StudyBuddy AI Partner
+
+                <div className="space-y-1">
+                  <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-100">
+                    How can I help you study today?
                   </h1>
                   <p className="text-zinc-400 text-xs md:text-sm max-w-md mx-auto leading-relaxed">
-                    Your patient academic mentor. Ask any concept, debug code, or pick a starter accelerator below.
+                    Ask any academic concept, debug code, or pick a starter accelerator below.
                   </p>
                 </div>
 
-                {/* 4 Clean Starter Cards */}
+                {/* 4 Clean Starter Accelerator Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full pt-4">
                   {STARTER_CARDS.map((card, idx) => (
-                    <motion.button
+                    <button
                       key={idx}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
+                      type="button"
                       onClick={() => sendMessage(card.prompt)}
-                      className="flex flex-col text-left p-3.5 rounded-xl bg-[#121320]/70 hover:bg-purple-600/10 border border-purple-500/15 hover:border-purple-500/35 transition-all shadow-sm group"
+                      className="flex flex-col text-left p-3.5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.08] hover:border-purple-500/30 transition-all shadow-xs group cursor-pointer"
                     >
                       <div className="flex items-center gap-2 mb-1">
-                        <card.icon className="w-4 h-4 text-purple-400 group-hover:text-purple-300 transition-colors" />
-                        <span className="text-xs font-semibold text-white group-hover:text-purple-200 transition-colors">
+                        <div className="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/5 flex items-center justify-center shrink-0">
+                          <card.icon className="w-3.5 h-3.5 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                        </div>
+                        <span className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors">
                           {card.title}
                         </span>
                       </div>
-                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                      <p className="text-[11.5px] text-zinc-400 line-clamp-2 leading-relaxed">
                         {card.description}
                       </p>
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
               </motion.div>
             </div>
           ) : (
-            <div className="space-y-6">
+            /* Modern ChatGPT-style Message Stream */
+            <div className="space-y-7 py-2">
               {messages.map((message, index) => (
-                <div key={message.id} className="w-full">
+                <div key={message.id || `msg-${index}`} className="w-full">
                   {message.role === 'assistant' ? (
                     <div className="flex gap-3 md:gap-4 items-start w-full group">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shrink-0 mt-1 shadow-md shadow-purple-500/10">
-                        <Bot className="h-4 w-4 text-purple-300" />
+                      {/* Assistant Avatar */}
+                      <div className="w-8 h-8 rounded-full bg-[#161722] border border-white/10 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                        <Sparkles className="h-4 w-4 text-purple-400" />
                       </div>
 
-                      <div className="flex-1 min-w-0 bg-[#121320]/80 backdrop-blur-md border border-purple-500/20 hover:border-purple-500/30 transition-all rounded-2xl p-4 md:p-5 shadow-[0_4px_24px_rgba(147,51,234,0.05)] relative">
-                        {/* AI Message Header */}
-                        <div className="flex items-center justify-between pb-2 mb-3 border-b border-white/[0.06]">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-purple-200">StudyBuddy AI</span>
-                            <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/30 flex items-center gap-1">
-                              <Sparkles className="w-2.5 h-2.5 text-purple-400" /> AI TUTOR
-                            </span>
-                          </div>
+                      {/* Content Canvas */}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-zinc-200 text-[14px] leading-relaxed overflow-hidden">
+                          <MarkdownRenderer content={message.content || message.text || ''} />
+                        </div>
 
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleSaveToNotes(message.content)}
-                              className="p-1 px-2 text-zinc-400 hover:text-white rounded-md hover:bg-white/5 transition-all text-xs flex items-center gap-1 border border-white/5"
-                              title="Save explanation to collaborative room notes"
-                            >
-                              <BookmarkPlus className="h-3.5 w-3.5 text-purple-300" />
-                              <span className="text-[11px] hidden sm:inline text-zinc-300">Save to Notes</span>
-                            </button>
-
+                        {/* Quiet modern action toolbar below message */}
+                        <div className="flex items-center gap-1 mt-2.5 pt-1 text-xs text-zinc-400">
+                          <Tip label="Copy response" side="bottom">
                             <button
                               onClick={() => handleCopy(message.content, message.id)}
-                              className="p-1 px-2 text-zinc-400 hover:text-white rounded-md hover:bg-white/5 transition-all text-xs flex items-center gap-1 border border-white/5"
-                              title="Copy response"
+                              className="p-1 px-2 text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-white/5 transition-all text-xs flex items-center gap-1.5"
                             >
                               {copiedId === message.id ? (
                                 <>
                                   <Check className="h-3.5 w-3.5 text-emerald-400" />
-                                  <span className="text-[11px] text-emerald-400 font-semibold">Copied</span>
+                                  <span className="text-[11px] text-emerald-400 font-medium">Copied</span>
                                 </>
                               ) : (
                                 <>
-                                  <Copy className="h-3.5 w-3.5 text-purple-300" />
-                                  <span className="text-[11px] text-zinc-300">Copy</span>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  <span className="text-[11px]">Copy</span>
                                 </>
                               )}
                             </button>
-                          </div>
+                          </Tip>
+
+                          <Tip label="Save note into room collaborative notes" side="bottom">
+                            <button
+                              onClick={() => handleSaveToNotes(message.content)}
+                              className="p-1 px-2 text-zinc-400 hover:text-zinc-200 rounded-lg hover:bg-white/5 transition-all text-xs flex items-center gap-1.5"
+                            >
+                              <BookmarkPlus className="h-3.5 w-3.5 text-purple-400" />
+                              <span className="text-[11px]">Save to Notes</span>
+                            </button>
+                          </Tip>
                         </div>
 
-                        {/* Content */}
-                        <div className="text-[#e4e4e7] overflow-hidden">
-                          <MarkdownRenderer content={message.content || message.text || ''} />
-                        </div>
-
-                        {/* Follow-up accelerator chips (only on latest assistant response) */}
+                        {/* Follow-up accelerator chips (only on the latest assistant response) */}
                         {index === lastAssistantIndex && (
-                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.04] flex-wrap">
-                            <span className="text-[10px] text-zinc-500 font-medium mr-1">Follow up:</span>
+                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06] flex-wrap">
+                            <span className="text-[11px] text-zinc-500 font-medium mr-1">Suggestions:</span>
                             <button
                               type="button"
                               onClick={() => sendMessage('Can you give a concrete, step-by-step code or practical example of this?')}
-                              className="text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/15 border border-white/5 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 shadow-sm"
+                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
                             >
-                              💡 Give code example
+                              <CodeIcon className="w-3 h-3 text-indigo-400" />
+                              <span>Give code example</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => sendMessage('Give me a practice problem or quick quiz based on what you just explained.')}
-                              className="text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/15 border border-white/5 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 shadow-sm"
+                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
                             >
-                              🎯 Practice problem
+                              <Brain className="w-3 h-3 text-emerald-400" />
+                              <span>Practice problem</span>
                             </button>
                             <button
                               type="button"
                               onClick={() => sendMessage('Can you simplify this further in plain English as if I were a beginner?')}
-                              className="text-[11px] px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-purple-500/15 border border-white/5 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 shadow-sm"
+                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
                             >
-                              🧒 Simplify this
+                              <Sparkles className="w-3 h-3 text-purple-400" />
+                              <span>Simplify this</span>
                             </button>
                           </div>
                         )}
                       </div>
                     </div>
                   ) : (
-                    <div className="flex gap-3 justify-end items-start w-full">
-                      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl rounded-tr-none px-4 py-3 shadow-[0_4px_16px_rgba(113,72,235,0.25)] max-w-[85%] md:max-w-[75%] border border-white/10">
-                        <p className="text-[13.5px] md:text-[14px] leading-relaxed whitespace-pre-wrap">
+                    /* User Message: Clean modern 2026 ChatGPT pill */
+                    <div className="flex gap-2.5 justify-end items-start w-full">
+                      <div className="bg-[#27272a] hover:bg-[#2c2c31] text-zinc-100 rounded-3xl px-4 py-2.5 shadow-sm max-w-[85%] md:max-w-[75%] border border-white/5 transition-colors">
+                        <p className="text-[14px] leading-relaxed whitespace-pre-wrap select-text">
                           {message.content}
                         </p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-bold shadow-sm mt-1">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-semibold shadow-xs mt-0.5">
                         {user?.displayName?.[0] || 'U'}
                       </div>
                     </div>
@@ -816,27 +823,31 @@ export function AiStudyBuddy({ roomId }) {
                 </div>
               ))}
 
-              {/* Typing indicator */}
+              {/* 2026 ChatGPT-style Thinking Indicator */}
               {isLoading && (
                 <div className="flex gap-3 md:gap-4 items-center">
-                  <div className="w-8 h-8 rounded-full bg-[#c084fc]/20 text-[#c084fc] flex items-center justify-center shrink-0 shadow-sm">
-                    <Bot className="h-4 w-4 text-purple-300 animate-pulse" />
+                  <div className="w-8 h-8 rounded-full bg-[#161722] border border-white/10 flex items-center justify-center shrink-0 shadow-xs">
+                    <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
                   </div>
-                  <div className="bg-[#121320]/80 border border-purple-500/25 rounded-2xl px-4 py-2 text-purple-300 text-xs flex items-center gap-2.5">
-                    <span className="w-2 h-2 rounded-full bg-purple-400 animate-ping" />
-                    <span>StudyBuddy is reasoning and synthesizing...</span>
+                  <div className="flex items-center gap-2 text-zinc-400 text-xs py-2 px-1">
+                    <span className="flex gap-1 items-center">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" />
+                    </span>
+                    <span className="font-medium text-zinc-400">StudyBuddy is thinking...</span>
                   </div>
                 </div>
               )}
 
               {/* Error state */}
               {hasError && (
-                <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-sm">
+                <div className="flex items-center gap-3 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-300">
                   <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
-                  <span className="text-red-400 flex-1">Unable to generate response. Try again?</span>
+                  <span className="flex-1">Unable to generate response. Try again?</span>
                   <button
                     onClick={handleRetry}
-                    className="text-red-400 hover:text-red-300 font-medium flex items-center gap-1"
+                    className="text-red-300 hover:text-white font-medium flex items-center gap-1 px-2 py-1 rounded bg-red-500/20"
                   >
                     <RotateCcw className="h-3 w-3" /> Retry
                   </button>
@@ -847,44 +858,46 @@ export function AiStudyBuddy({ roomId }) {
         </div>
       </ScrollArea>
 
-      {/* ── 3. Quick Action Chips Docked Above Input ── */}
-      <div className="shrink-0 px-4 md:px-6 pt-2 max-w-4xl mx-auto w-full relative z-10">
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1">
-          {QUICK_ACTIONS.map((action, index) => (
-            <button
-              key={index}
-              type="button"
-              onClick={() => {
-                const currentInput = input.trim();
-                if (currentInput) {
-                  if (action.label === 'Explain') sendMessage(`Explain this topic clearly with examples: "${currentInput}"`);
-                  else if (action.label === 'Code Help') sendMessage(`Help me understand and debug this code: "${currentInput}"`);
-                  else if (action.label === 'Quiz Me') sendMessage(`Quiz me on "${currentInput}" with questions and answers.`);
-                  else if (action.label.includes('Simplify')) sendMessage(`Break this down simply in beginner-friendly terms: "${currentInput}"`);
-                  else if (action.label === 'Practice') sendMessage(`Give me a practice problem with step-by-step solution for: "${currentInput}"`);
-                  else sendMessage(`Give me proven study techniques for: "${currentInput}"`);
-                } else {
-                  sendMessage(action.prompt);
-                }
-              }}
-              disabled={isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white rounded-full bg-[#121320]/80 hover:bg-purple-600/20 border border-purple-500/20 hover:border-purple-500/40 transition-all whitespace-nowrap disabled:opacity-50 flex-shrink-0 shadow-sm active:scale-95"
+      {/* ── 3. Quick Action Chips Docked Above Input (ONLY visible when NOT typing!) ── */}
+      <div className="shrink-0 px-4 md:px-6 pt-1 max-w-3xl mx-auto w-full relative z-10">
+        <AnimatePresence>
+          {!isTyping && (
+            <motion.div
+              initial={{ opacity: 0, y: 6, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: 6, height: 0 }}
+              transition={{ duration: 0.18, ease: 'easeOut' }}
+              className="overflow-hidden"
             >
-              <action.icon className="h-3.5 w-3.5 text-purple-400" />
-              <span>{action.label}</span>
-            </button>
-          ))}
-        </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5">
+                {QUICK_ACTIONS.map((action, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => {
+                      sendMessage(action.prompt);
+                    }}
+                    disabled={isLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 transition-all whitespace-nowrap disabled:opacity-50 flex-shrink-0 shadow-xs active:scale-95 group"
+                  >
+                    <action.icon className="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 transition-colors" />
+                    <span>{action.label}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* ── 4. Polished Input Bar ── */}
-      <div className="shrink-0 p-4 md:p-6 pt-2 relative z-10 w-full max-w-4xl mx-auto">
+      {/* ── 4. 2026 Modern ChatGPT Input Capsule ── */}
+      <div className="shrink-0 p-4 md:p-6 pt-1 relative z-10 w-full max-w-3xl mx-auto">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage();
           }}
-          className="relative flex items-center bg-[#121320]/90 backdrop-blur-xl border border-purple-500/30 focus-within:border-purple-400/60 rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all overflow-hidden p-1.5"
+          className="relative flex flex-col bg-[#14151f]/90 backdrop-blur-2xl border border-white/10 focus-within:border-zinc-400/50 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.6)] transition-all overflow-hidden p-2"
         >
           <textarea
             ref={textareaRef}
@@ -901,26 +914,48 @@ export function AiStudyBuddy({ roomId }) {
                 sendMessage();
               }
             }}
-            placeholder="Ask StudyBuddy anything, paste code, or ask for study tips..."
-            className="flex-1 bg-transparent border-0 px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar"
+            placeholder="Ask StudyBuddy anything..."
+            className="w-full bg-transparent border-0 px-2 py-1 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar leading-relaxed"
             disabled={isLoading}
           />
 
-          <button
-            type="submit"
-            disabled={isLoading || !input.trim()}
-            className="w-9 h-9 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white flex items-center justify-center shrink-0 disabled:opacity-40 disabled:cursor-not-allowed shadow-md transition-all active:scale-95"
-            title="Send (Enter ↵)"
-          >
-            <ArrowUp className="w-4 h-4" />
-          </button>
+          <div className="flex items-center justify-between pt-2 px-1">
+            <span className="text-[11px] text-zinc-500">
+              Enter ↵ to send • Shift+Enter for new line
+            </span>
+
+            <div className="flex items-center gap-2">
+              {input.length > 500 && (
+                <span className="text-[10px] text-zinc-500">{input.length}/{MAX_INPUT_LENGTH}</span>
+              )}
+
+              {isLoading ? (
+                <Tip label="Stop generating" side="top">
+                  <button
+                    type="button"
+                    onClick={handleStopGeneration}
+                    className="w-8 h-8 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0 transition-colors"
+                  >
+                    <Square className="w-3.5 h-3.5 fill-current" />
+                  </button>
+                </Tip>
+              ) : (
+                <Tip label="Send prompt" side="top">
+                  <button
+                    type="submit"
+                    disabled={!input.trim()}
+                    className="w-8 h-8 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 disabled:opacity-20 disabled:hover:bg-white shadow-sm transition-all active:scale-95"
+                  >
+                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                  </button>
+                </Tip>
+              )}
+            </div>
+          </div>
         </form>
 
-        <div className="flex items-center justify-between px-2 pt-1.5 text-[10.5px] text-zinc-500">
-          <span>Enter ↵ to send • Shift+Enter for new line</span>
-          {input.length > 500 && (
-            <span>{input.length}/{MAX_INPUT_LENGTH}</span>
-          )}
+        <div className="text-center pt-2 text-[10.5px] text-zinc-500 select-none">
+          StudyBuddy can make mistakes. Verify important academic facts.
         </div>
       </div>
     </div>
