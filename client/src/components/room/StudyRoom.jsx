@@ -536,7 +536,7 @@ function StudyRoomContent({ roomId, onLeave }) {
                  animate={{opacity:1}} 
                  exit={{opacity:0}} 
                  transition={{duration:0.1}} 
-                 className="h-full"
+                 className="h-full w-full min-w-0"
                >
                   {activeTab === 'chat' && <ChatPanel roomId={roomId} roomData={currentRoom} />}
                   {activeTab.startsWith('custom-') && <ChatPanel roomId={`${roomId}_${activeTab}`} roomData={{...currentRoom, name: activeTab.replace('custom-', '')}} />}
