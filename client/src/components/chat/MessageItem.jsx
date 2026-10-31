@@ -20,8 +20,9 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 export const MessageItem = memo(function MessageItem({
   message, isOwn, canDelete, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
 }) {
-  const users = useUsersStore(state => state.users);
-  const realUser = users[message.senderId];
+  const realUser = useUsersStore(
+    useCallback(state => state.users[message.senderId] ?? null, [message.senderId])
+  );
   const isAi = message.isAi || message.senderId === 'ai-studybuddy' || message.senderName?.toLowerCase().includes('studybuddy');
   const displayName = isAi ? 'StudyBuddy AI' : (realUser?.displayName || realUser?.name || message.senderName || 'Anonymous');
   const photoURL = realUser?.photoURL || realUser?.avatarUrl || message.senderPhotoURL || undefined;
@@ -211,7 +212,7 @@ export const MessageItem = memo(function MessageItem({
     if (message.type === 'voice' && audioSrc) {
       return (
         <div className="space-y-2">
-          <VoiceMessage audioUrl={audioSrc} duration={message.voice?.duration || message.fileDuration} />
+          <VoiceMessage key={audioSrc} audioUrl={audioSrc} duration={message.voice?.duration || message.fileDuration} />
           {message.text && message.text !== 'Voice message' && <p className="text-sm pr-12">{message.text}</p>}
         </div>
       );
