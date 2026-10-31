@@ -38,7 +38,7 @@ export function AnalyticsDashboard({ roomId }) {
   const [activeUsers, setActiveUsers] = useState(0);
   const { user } = useAuth();
   const [showErrors, setShowErrors] = useState(false);
-  const [errors, setErrors] = useState(() => [
+  const [errors] = useState(() => [
     {
       id: '1',
       message: 'Failed to sync notes',
