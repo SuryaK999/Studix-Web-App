@@ -6,7 +6,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import {
-  Sparkles,
   Send,
   Copy,
   Check,
@@ -14,7 +13,7 @@ import {
   Download,
   Loader2,
   X,
-  Bot
+  Bot,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { isGroqConfigured } from '@/services/aiService';
