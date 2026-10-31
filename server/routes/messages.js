@@ -90,4 +90,50 @@ router.delete('/:roomId/:messageId', expressAuthMiddleware, async (req, res) => 
   }
 });
 
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+
+const voiceUploadDir = path.join(__dirname, '../uploads/voice');
+if (!fs.existsSync(voiceUploadDir)) {
+  try {
+    fs.mkdirSync(voiceUploadDir, { recursive: true });
+  } catch (_) {}
+}
+
+const voiceMulterStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, voiceUploadDir);
+  },
+  filename: (_req, file, cb) => {
+    const mime = file.mimetype || '';
+    const ext = mime.includes('mp4') ? 'mp4' : mime.includes('ogg') ? 'ogg' : 'webm';
+    cb(null, `voice-${Date.now()}-${Math.round(Math.random() * 1e9)}.${ext}`);
+  }
+});
+
+const voiceUpload = multer({
+  storage: voiceMulterStorage,
+  limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+router.post('/upload-voice', voiceUpload.single('audio'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No audio file uploaded' });
+    }
+    const relativeUrl = `/uploads/voice/${req.file.filename}`;
+    res.json({
+      success: true,
+      url: relativeUrl,
+      fileName: req.file.filename,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+    });
+  } catch (err) {
+    console.error('[API/messages] Voice upload error:', err.message);
+    res.status(500).json({ error: 'Failed to upload voice recording' });
+  }
+});
+
 module.exports = router;
