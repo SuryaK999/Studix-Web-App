@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -9,7 +9,6 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/config';
-
 import { fetchUserProfile } from '@/services/api';
 import { logger } from '@/lib/logger';
 
@@ -37,77 +36,98 @@ export function AuthProvider({ children }) {
   }, [user, loading]);
 
   useEffect(() => {
+    let isCancelled = false;
+
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        
         const basicUser = {
           uid: firebaseUser.uid,
           email: firebaseUser.email,
           displayName: firebaseUser.displayName,
           photoURL: firebaseUser.photoURL,
         };
-        setUser(prev => ({ ...(prev || {}), ...basicUser }));
+
+        if (!isCancelled) {
+          setUser(prev => ({ ...(prev || {}), ...basicUser }));
+        }
 
         try {
           const profile = await fetchUserProfile();
-          setUser(prev => prev ? { ...prev, ...profile } : null);
+          if (!isCancelled) {
+            setUser(prev => (prev ? { ...prev, ...profile } : null));
+          }
         } catch (err) {
           logger.error('Failed to fetch persistent profile', 'AuthContext', err);
         }
       } else {
-        setUser(null);
+        if (!isCancelled) {
+          setUser(null);
+        }
       }
-      setLoading(false);
+      if (!isCancelled) {
+        setLoading(false);
+      }
     });
+
+    const channel = new BroadcastChannel('studix_auth');
+    channel.onmessage = (msg) => {
+      if (msg.data?.type === 'PROFILE_UPDATED' && msg.data?.user) {
+        setUser(msg.data.user);
+      } else if (msg.data?.type === 'TOKEN_EXPIRED') {
+        signOut(auth).catch(() => {});
+      }
+    };
 
     const handleProfileUpdate = (e) => {
       const updated = e.detail;
       setUser(prev => {
         const next = prev ? { ...prev, ...updated } : null;
-        
-        const channel = new BroadcastChannel('studix_auth');
-        channel.postMessage({ type: 'PROFILE_UPDATED', user: next });
-        channel.close();
+        try {
+          channel.postMessage({ type: 'PROFILE_UPDATED', user: next });
+        } catch (_) {}
         return next;
       });
-    };
-
-    const channel = new BroadcastChannel('studix_auth');
-    channel.onmessage = (msg) => {
-      if (msg.data.type === 'PROFILE_UPDATED') {
-        setUser(msg.data.user);
-      }
     };
 
     window.addEventListener('userProfileUpdated', handleProfileUpdate);
 
     return () => {
+      isCancelled = true;
       unsubscribe();
       window.removeEventListener('userProfileUpdated', handleProfileUpdate);
       channel.close();
     };
   }, []);
 
-  const signIn = async (email, password) => {
+  const signIn = useCallback(async (email, password) => {
     await signInWithEmailAndPassword(auth, email, password);
-  };
+  }, []);
 
-  const signUp = async (email, password, displayName) => {
+  const signUp = useCallback(async (email, password, displayName) => {
     const { user: firebaseUser } = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(firebaseUser, { displayName });
-  };
+  }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = useCallback(async () => {
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await signOut(auth);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    logout,
+  }), [user, loading, signIn, signUp, signInWithGoogle, logout]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signInWithGoogle, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
@@ -122,7 +142,7 @@ export function useAuth() {
       signIn: async () => {},
       signUp: async () => {},
       signInWithGoogle: async () => {},
-      logout: async () => {}
+      logout: async () => {},
     };
   }
   return context;
