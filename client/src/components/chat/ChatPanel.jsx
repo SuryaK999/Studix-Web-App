@@ -14,6 +14,7 @@ import {
   X,
   ChevronUp,
   Plus,
+  Trash2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -562,17 +563,37 @@ export function ChatPanel({ roomId, roomData, className }) {
           </Tip>
 
           {audioBlob && !isRecording && (
-            <Tip label="Send recorded voice note" side="top">
-              <button
-                type="button"
-                onClick={handleSendVoice}
-                className="studix-send-btn !w-auto px-4 !bg-emerald-500 hover:!bg-emerald-600 gap-2"
-                disabled={isLoading}
-              >
-                <span className="text-[13px] font-bold">Voice</span>
-                <Send size={15} />
-              </button>
-            </Tip>
+            <div className="flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <Tip label="Discard voice recording" side="top">
+                <button
+                  type="button"
+                  onClick={clearRecording}
+                  className="studix-icon-btn !text-red-400 hover:!text-red-300 hover:!bg-red-500/20 !border-red-500/30"
+                  disabled={isUploading}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </Tip>
+              <Tip label="Send recorded voice note" side="top">
+                <button
+                  type="button"
+                  onClick={handleSendVoice}
+                  className="studix-send-btn !w-auto px-3.5 !bg-emerald-500 hover:!bg-emerald-600 gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                  disabled={isLoading || isUploading}
+                >
+                  {isUploading ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <>
+                      <span className="text-[12px] font-bold font-mono">
+                        {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                      </span>
+                      <Send size={14} />
+                    </>
+                  )}
+                </button>
+              </Tip>
+            </div>
           )}
 
           <Tip label="Send message (Enter)" side="top">
