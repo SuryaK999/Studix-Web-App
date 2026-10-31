@@ -8,7 +8,8 @@ export function useChatMessages(roomId, user, socket) {
     if (!roomId) return [];
     try {
       const cached = localStorage.getItem(`studix_chat_${roomId}`);
-      return cached ? JSON.parse(cached) : [];
+      const parsed = cached ? JSON.parse(cached) : [];
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -28,7 +29,7 @@ export function useChatMessages(roomId, user, socket) {
 
   // Save to localStorage whenever messages change
   useEffect(() => {
-    if (roomId && messages.length > 0) {
+    if (roomId && Array.isArray(messages) && messages.length > 0) {
       try {
         localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(messages.slice(-80)));
       } catch (_) {}
@@ -50,7 +51,8 @@ export function useChatMessages(roomId, user, socket) {
     // Immediately switch to the new room's cache (or empty array) to avoid leaking previous room's state
     try {
       const cached = localStorage.getItem(`studix_chat_${roomId}`);
-      setMessages(cached ? JSON.parse(cached) : []);
+      const parsed = cached ? JSON.parse(cached) : [];
+      setMessages(Array.isArray(parsed) ? parsed : []);
     } catch {
       setMessages([]);
     }
