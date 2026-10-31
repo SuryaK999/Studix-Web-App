@@ -21,6 +21,7 @@ import {
   Square
 } from 'lucide-react';
 import { StudyBuddyIcon, StudyBuddyAvatar } from '@/components/ui/StudyBuddyIcon';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/hooks/useSocket';
 import { db } from '@/lib/firebase/config';
@@ -41,15 +42,6 @@ import { fetchMessages, fetchNote } from '@/services/api';
 import { callGroqApi, isGroqConfigured } from '@/services/aiService';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 import { Tip } from '@/components/ui/tip';
-
-const QUICK_ACTIONS = [
-  { icon: BookOpen, label: 'Explain', prompt: 'Explain this topic clearly with intuitive analogies and concrete examples.' },
-  { icon: Lightbulb, label: 'Study Tips', prompt: 'Give me proven study techniques and memory cues for this subject.' },
-  { icon: Calculator, label: 'Practice', prompt: 'Give me a practice problem with a step-by-step solution.' },
-  { icon: CodeIcon, label: 'Code Help', prompt: 'Help me understand and debug this code concept with syntax examples.' },
-  { icon: Brain, label: 'Quiz Me', prompt: 'Quiz me on this topic with 5 active-recall questions and hidden answers.' },
-  { icon: HelpCircle, label: 'Simplify (ELI5)', prompt: 'Break this down simply as if I were a beginner.' },
-];
 
 const STARTER_CARDS = [
   {
@@ -621,8 +613,6 @@ export function AiStudyBuddy({ roomId }) {
   const hasError = aiState === 'error';
 
   // Condition to check if user has started typing
-  const isTyping = input.trim().length > 0;
-
   return (
     <div
       id={`ai-tutor-${roomId}`}
@@ -635,19 +625,32 @@ export function AiStudyBuddy({ roomId }) {
       {/* ── 1. Modern Minimalist Top Bar ── */}
       <header className="relative z-10 flex items-center justify-between min-h-[52px] h-auto py-2 px-3 sm:px-4 md:px-6 shrink-0 border-b border-white/[0.08] bg-[#0c0d12]/90 backdrop-blur-xl gap-2">
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
-          <StudyBuddyAvatar size="md" shape="squircle" glow />
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
+          <StudyBuddyAvatar size="md" shape="squircle" />
+          <div className="flex items-center gap-2 min-w-0">
             <h2 className="font-semibold text-zinc-100 text-xs sm:text-sm tracking-tight truncate">
               StudyBuddy AI
             </h2>
+            {isGroqConfigured() ? (
+              <Tip label="Active Engine: Groq Cloud LPU" side="bottom">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium text-zinc-300 bg-white/[0.04] border border-white/10 rounded-md shrink-0 cursor-help select-none">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/90" />
+                  <span>Llama 3.3</span>
+                </span>
+              </Tip>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-medium text-zinc-400 bg-white/[0.03] border border-white/10 rounded-md shrink-0 select-none">
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+                <span>Offline</span>
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {context && (
             <Tip label="Context aware of recent room discussions" side="bottom">
-              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[10.5px] sm:text-[11px] text-zinc-400 max-w-[130px] sm:max-w-[200px] truncate cursor-help">
-                <StudyBuddyIcon size={12} variant="gradient" className="shrink-0" />
+              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[10.5px] sm:text-[11px] text-zinc-400 max-w-[100px] sm:max-w-[200px] truncate cursor-help">
+                <Sparkles className="w-3.5 h-3.5 text-purple-400/80 shrink-0" />
                 <span className="hidden sm:inline truncate">Room Context Active</span>
                 <span className="sm:hidden text-[9px] font-medium text-purple-300">Context</span>
               </div>
@@ -665,9 +668,12 @@ export function AiStudyBuddy({ roomId }) {
         </div>
       </header>
 
-      {/* ── 2. Message History & 2026 ChatGPT Canvas ── */}
+      {/* ── 2. Message History & ChatGPT Canvas ── */}
       <ScrollArea className="flex-1 min-h-0 relative z-10 w-full" ref={scrollRef}>
-        <div className="p-3 sm:p-4 md:p-6 max-w-3xl mx-auto flex flex-col justify-end min-h-full">
+        <div className={cn(
+          "p-3 sm:p-4 md:p-6 max-w-3xl mx-auto flex flex-col min-h-full",
+          messages.length === 0 ? "justify-center" : "justify-start"
+        )}>
           {messages.length === 0 ? (
             /* Modern ChatGPT / Claude Empty State Hero */
             <div className="flex-1 flex flex-col items-center justify-center min-h-[420px] sm:min-h-[460px] text-center px-3 sm:px-4 py-6 sm:py-8">
@@ -677,7 +683,7 @@ export function AiStudyBuddy({ roomId }) {
                 transition={{ duration: 0.35, ease: 'easeOut' }}
                 className="flex flex-col items-center gap-3 sm:gap-4 max-w-xl w-full"
               >
-                <StudyBuddyAvatar size="xl" shape="squircle" glow />
+                <StudyBuddyAvatar size="xl" shape="squircle" />
 
                 <div className="space-y-1">
                   <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-zinc-100">
@@ -763,7 +769,7 @@ export function AiStudyBuddy({ roomId }) {
 
                         {/* Follow-up accelerator chips (only on the latest assistant response) */}
                         {index === lastAssistantIndex && (
-                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06] flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06] flex-wrap py-0.5 scrollbar-none no-scrollbar">
                             <span className="text-[10.5px] sm:text-[11px] text-zinc-500 font-medium mr-0.5 shrink-0">Suggestions:</span>
                             <button
                               type="button"
@@ -786,7 +792,7 @@ export function AiStudyBuddy({ roomId }) {
                               onClick={() => sendMessage('Can you simplify this further in plain English as if I were a beginner?')}
                               className="text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                             >
-                              <StudyBuddyIcon size={12} variant="gradient" className="shrink-0" />
+                              <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
                               <span>Simplify this</span>
                             </button>
                           </div>
@@ -842,40 +848,8 @@ export function AiStudyBuddy({ roomId }) {
         </div>
       </ScrollArea>
 
-      {/* ── 3. Quick Action Chips Docked Above Input (ONLY visible when NOT typing!) ── */}
-      <div className="shrink-0 px-3 sm:px-4 md:px-6 pt-1 max-w-3xl mx-auto w-full relative z-10">
-        <AnimatePresence>
-          {!isTyping && (
-            <motion.div
-              initial={{ opacity: 0, y: 6, height: 0 }}
-              animate={{ opacity: 1, y: 0, height: 'auto' }}
-              exit={{ opacity: 0, y: 6, height: 0 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 touch-pan-x">
-                {QUICK_ACTIONS.map((action, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => {
-                      sendMessage(action.prompt);
-                    }}
-                    disabled={isLoading}
-                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-zinc-300 hover:text-white rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 transition-all whitespace-nowrap disabled:opacity-50 flex-shrink-0 shadow-xs active:scale-95 group"
-                  >
-                    <action.icon className="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 transition-colors" />
-                    <span>{action.label}</span>
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* ── 4. Modern Input Capsule ── */}
-      <div className="shrink-0 p-3 sm:p-4 md:p-6 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] relative z-10 w-full max-w-3xl mx-auto">
+      {/* ── 2. Modern Input Capsule ── */}
+      <div className="shrink-0 p-3 sm:p-4 md:p-6 pt-2 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] relative z-10 w-full max-w-3xl mx-auto">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -899,14 +873,16 @@ export function AiStudyBuddy({ roomId }) {
               }
             }}
             placeholder="Ask StudyBuddy anything..."
-            className="w-full bg-transparent border-0 px-2 py-1 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar leading-relaxed"
+            className="w-full bg-transparent border-0 px-2.5 py-1.5 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar leading-relaxed"
             disabled={isLoading}
           />
 
-          <div className="flex items-center justify-between pt-1.5 sm:pt-2 px-1 gap-2">
-            <span className="text-[10px] sm:text-[11px] text-zinc-500 truncate">
+          <div className="flex items-center justify-between pt-1 sm:pt-2 px-1 gap-2">
+            <span className="text-[10px] sm:text-[11px] text-zinc-500 truncate select-none">
               <span className="hidden sm:inline">Enter ↵ to send • Shift+Enter for new line</span>
-              <span className="sm:hidden">StudyBuddy AI</span>
+              <span className="sm:hidden inline-flex items-center gap-1 text-purple-300/90 font-medium">
+                <StudyBuddyIcon size={11} variant="gradient" /> StudyBuddy AI
+              </span>
             </span>
 
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
@@ -919,9 +895,9 @@ export function AiStudyBuddy({ roomId }) {
                   <button
                     type="button"
                     onClick={handleStopGeneration}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0 transition-colors"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0 transition-colors"
                   >
-                    <Square className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
+                    <Square className="w-3.5 h-3.5 fill-current" />
                   </button>
                 </Tip>
               ) : (
@@ -929,9 +905,9 @@ export function AiStudyBuddy({ roomId }) {
                   <button
                     type="submit"
                     disabled={!input.trim()}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 disabled:opacity-20 disabled:hover:bg-white shadow-sm transition-all active:scale-95"
+                    className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 disabled:opacity-20 disabled:hover:bg-white shadow-sm transition-all active:scale-95"
                   >
-                    <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
                   </button>
                 </Tip>
               )}
