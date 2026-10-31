@@ -47,7 +47,7 @@ export function TooltipPanel({
   children,
   className,
   side = "top",
-  align = "center",
+  align: _align = "center",
   hidden = false,
   ...props
 }) {
