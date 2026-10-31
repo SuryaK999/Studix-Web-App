@@ -21,7 +21,12 @@ const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
 
 const app = express();
 
-app.use(helmet({ contentSecurityPolicy: false }));
+// Helmet security headers — allow popups for Firebase OAuth (Google sign-in)
+app.use(helmet({ 
+  contentSecurityPolicy: false,
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+}));
+
 app.use(cors({
   origin: function (_origin, callback) {
     // Allow local development and deployed frontend origins
