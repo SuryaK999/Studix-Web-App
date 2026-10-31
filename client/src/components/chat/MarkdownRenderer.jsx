@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { StudyBuddyIcon } from '@/components/ui/StudyBuddyIcon';
 
 /**
  * Enhanced CodeBlock component with language badge and one-click copy button
@@ -149,7 +150,7 @@ function getHeadingDecor(rawText) {
   }
   if (lower.includes('welcome') || lower.includes('hello') || lower.includes('hey') || lower.includes('studybuddy')) {
     return {
-      icon: <Sparkles className="w-3.5 h-3.5 text-purple-400" />,
+      icon: <StudyBuddyIcon size={14} variant="gradient" />,
       badgeClass: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
       cleanText: strippedText,
     };
