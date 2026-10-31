@@ -8,12 +8,17 @@ const userCache = new Map();
 const pendingFetches = new Map();
 
 export function useUser(uid) {
-  const [user, setUser] = useState(userCache.get(uid) || null);
+  const [user, setUser] = useState(() => (uid ? userCache.get(uid) || null : null));
+  const [prevUid, setPrevUid] = useState(uid);
+
+  if (prevUid !== uid) {
+    setPrevUid(uid);
+    setUser(uid ? userCache.get(uid) || null : null);
+  }
 
   useEffect(() => {
     if (!uid) return;
     if (userCache.has(uid)) {
-      setUser(userCache.get(uid));
       return;
     }
 
