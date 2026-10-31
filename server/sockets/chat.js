@@ -108,7 +108,14 @@ function registerChatHandlers(socket, io) {
       if (!roomId || !messageId || !emoji || !socket.user) return;
 
       const userId = socket.user.uid;
-      const msg = await Message.findById(messageId);
+      const mongoose = require('mongoose');
+      let msg = null;
+      if (mongoose.Types.ObjectId.isValid(messageId)) {
+        msg = await Message.findById(messageId);
+      }
+      if (!msg) {
+        msg = await Message.findOne({ roomId, tempId: messageId });
+      }
       if (!msg) return;
 
       const reactions = {};
@@ -154,12 +161,13 @@ function registerChatHandlers(socket, io) {
         reactionUsers[userId] = socket.user.displayName;
       }
 
-      await Message.findByIdAndUpdate(messageId, { 
+      await Message.findByIdAndUpdate(msg._id, { 
         $set: { reactions, reactionUsers } 
       });
 
       io.to(roomId).emit('chat:reaction_update', {
-        messageId,
+        messageId: msg._id.toString(),
+        tempId: msg.tempId,
         reactions,
         reactionUsers,
       });
@@ -175,17 +183,25 @@ function registerChatHandlers(socket, io) {
       const safeText = newText ? xss(String(newText).substring(0, 2000)) : '';
       if (!safeText) return; 
 
-      const msg = await Message.findById(messageId);
+      const mongoose = require('mongoose');
+      let msg = null;
+      if (mongoose.Types.ObjectId.isValid(messageId)) {
+        msg = await Message.findById(messageId);
+      }
+      if (!msg) {
+        msg = await Message.findOne({ roomId, tempId: messageId });
+      }
       if (!msg || msg.senderId !== socket.user.uid) return; 
 
       const updatedMsg = await Message.findByIdAndUpdate(
-        messageId,
+        msg._id,
         { $set: { text: safeText, editedAt: new Date() } },
         { new: true }
       );
 
       io.to(roomId).emit('chat:message_edited', {
-        messageId,
+        messageId: msg._id.toString(),
+        tempId: msg.tempId,
         text: updatedMsg.text,
         editedAt: updatedMsg.editedAt,
       });
