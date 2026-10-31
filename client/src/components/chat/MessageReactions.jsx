@@ -102,14 +102,24 @@ EmojiPickerContent.propTypes = {
  */
 export const EmojiPickerPopover = memo(function EmojiPickerPopover({
   isOpen,
+  onOpenChange,
   onClose,
   onSelect,
   align = 'right',
   myReaction = null,
   children,
 }) {
+  const handleOpenChange = useCallback((open) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    }
+    if (!open) {
+      onClose?.();
+    }
+  }, [onOpenChange, onClose]);
+
   return (
-    <Popover open={isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       {children ? (
         <PopoverTrigger asChild>{children}</PopoverTrigger>
       ) : (
@@ -120,7 +130,7 @@ export const EmojiPickerPopover = memo(function EmojiPickerPopover({
         align={align === 'right' ? 'end' : 'start'}
         sideOffset={8}
         collisionPadding={12}
-        className="w-auto p-0 border-0 bg-transparent shadow-none z-50"
+        className="w-auto p-0 border-0 bg-transparent shadow-none z-[100]"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <EmojiPickerContent onSelect={onSelect} myReaction={myReaction} />
@@ -131,6 +141,7 @@ export const EmojiPickerPopover = memo(function EmojiPickerPopover({
 
 EmojiPickerPopover.propTypes = {
   isOpen: PropTypes.bool.isRequired,
+  onOpenChange: PropTypes.func,
   onClose: PropTypes.func.isRequired,
   onSelect: PropTypes.func.isRequired,
   align: PropTypes.oneOf(['left', 'right']),
@@ -344,6 +355,7 @@ export const MessageReactions = memo(function MessageReactions({
         {hasAnyReactions && (
           <EmojiPickerPopover
             isOpen={isPickerOpen}
+            onOpenChange={setShowPicker}
             onClose={closePicker}
             onSelect={toggleReaction}
             align={isOwn ? 'right' : 'left'}
@@ -351,12 +363,8 @@ export const MessageReactions = memo(function MessageReactions({
           >
             <button
               type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowPicker((prev) => !prev);
-              }}
               title="Add reaction"
-              className="w-6 h-6 rounded-full bg-[#181926]/80 border border-white/[0.08] hover:border-purple-500/40 hover:bg-purple-500/15 flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs"
+              className="w-6 h-6 rounded-full bg-[#181926]/80 border border-white/[0.08] hover:border-purple-500/40 hover:bg-purple-500/15 flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs cursor-pointer"
             >
               <Plus size={12} />
             </button>
@@ -367,6 +375,7 @@ export const MessageReactions = memo(function MessageReactions({
       {!hasAnyReactions && isPickerOpen && (
         <EmojiPickerPopover
           isOpen={isPickerOpen}
+          onOpenChange={setShowPicker}
           onClose={closePicker}
           onSelect={toggleReaction}
           align={isOwn ? 'right' : 'left'}
