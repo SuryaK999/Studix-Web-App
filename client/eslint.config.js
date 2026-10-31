@@ -27,6 +27,7 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      'no-empty': ['error', { allowEmptyCatch: true }],
       'no-unused-vars': [
         'warn',
         {
@@ -35,6 +36,12 @@ export default [
           caughtErrorsIgnorePattern: '^_|err|e',
         },
       ],
+    },
+  },
+  {
+    files: ['tailwind.config.js'],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ]
