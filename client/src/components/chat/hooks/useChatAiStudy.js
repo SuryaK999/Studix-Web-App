@@ -16,10 +16,13 @@ export function useChatAiStudy({
   const [summary, setSummary] = useState('');
   const [isSummarizing, setIsSummarizing] = useState(false);
   const aiTimeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
 
   // Clean up any pending AI response timeout
   useEffect(() => {
+    isMountedRef.current = true;
     return () => {
+      isMountedRef.current = false;
       if (aiTimeoutRef.current) {
         clearTimeout(aiTimeoutRef.current);
       }
@@ -38,6 +41,8 @@ export function useChatAiStudy({
     aiTimeoutRef.current = setTimeout(async () => {
       try {
         const aiText = await generateAiStudyResponse(trimmed, currentMessages);
+        if (!isMountedRef.current) return;
+
         const aiTempId = `ai-${Date.now()}`;
         const aiPayload = {
           tempId:         aiTempId,
@@ -60,7 +65,9 @@ export function useChatAiStudy({
         socket.emit('chat:send', { roomId, message: aiPayload });
         setTimeout(() => scrollToBottom?.('smooth'), 100);
       } catch (err) {
-        logger.error('Failed to generate AI response in chat', 'useChatAiStudy', err);
+        if (isMountedRef.current) {
+          logger.error('Failed to generate AI response in chat', 'useChatAiStudy', err);
+        }
       }
     }, 500);
   }, [socket, roomId, setMessages, scrollToBottom]);
@@ -119,13 +126,17 @@ export function useChatAiStudy({
         messages,
         roomName,
       });
+      if (!isMountedRef.current) return;
       setSummary(summaryResult);
     } catch (err) {
+      if (!isMountedRef.current) return;
       logger.error('Failed to generate AI summary', 'useChatAiStudy', err);
       setSummary('Unable to synthesize discussion at this time. Please check your network and try again.');
       toast.error('Could not generate chat summary');
     } finally {
-      setIsSummarizing(false);
+      if (isMountedRef.current) {
+        setIsSummarizing(false);
+      }
     }
   }, [messages, roomName]);
 
