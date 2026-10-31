@@ -37,8 +37,23 @@ export function useChatMessages(roomId, user, socket) {
 
   // Initial message fetch on room switch
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId) {
+      setMessages([]);
+      oldestTimestampRef.current = null;
+      setHasMoreMessages(false);
+      return;
+    }
+
     let cancelled = false;
+    oldestTimestampRef.current = null;
+
+    // Immediately switch to the new room's cache (or empty array) to avoid leaking previous room's state
+    try {
+      const cached = localStorage.getItem(`studix_chat_${roomId}`);
+      setMessages(cached ? JSON.parse(cached) : []);
+    } catch {
+      setMessages([]);
+    }
 
     const loadInitialMessages = async () => {
       try {
@@ -49,16 +64,13 @@ export function useChatMessages(roomId, user, socket) {
         const hasMore = Boolean(response?.hasMore);
 
         setMessages(prev => {
-          // Server messages are authoritative; deleted messages must never be restored from cache
+          // Server messages are authoritative; preserve recent unconfirmed optimistic messages
           const recentTemps = prev.filter(m =>
             String(m.id).startsWith('temp-') &&
-            (Date.now() - new Date(m.createdAt || 0).getTime() < 15000)
+            (Date.now() - new Date(m.createdAt || 0).getTime() < 15000) &&
+            !msgs.some(serverMsg => serverMsg.tempId === m.tempId || String(serverMsg.id) === String(m.id))
           );
-          const combined = [...msgs, ...recentTemps];
-          try {
-            localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(combined.slice(-80)));
-          } catch (_) {}
-          return combined;
+          return [...msgs, ...recentTemps];
         });
 
         setHasMoreMessages(hasMore);
@@ -83,23 +95,29 @@ export function useChatMessages(roomId, user, socket) {
     if (!socket || !roomId) return;
 
     const handleChatReceive = (msg) => {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || !msg) return;
+      if (msg.roomId && msg.roomId !== roomId) return;
+
       setMessages(prev => {
-        const isDupe = prev.some(m => {
+        const index = prev.findIndex(m => {
           if (m.id && msg.id && String(m.id) === String(msg.id)) return true;
           if (msg.tempId && (String(m.id) === msg.tempId || m.tempId === msg.tempId)) return true;
           return false;
         });
 
-        if (isDupe) return prev;
+        if (index !== -1) {
+          const next = [...prev];
+          next[index] = { ...next[index], ...msg };
+          return next;
+        }
         return [...prev, msg];
       });
     };
 
     const handleChatSaved = ({ tempId, id }) => {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || !tempId) return;
       setMessages(prev =>
-        prev.map(m => (String(m.id) === tempId || m.tempId === tempId ? { ...m, id } : m))
+        prev.map(m => (String(m.id) === String(tempId) || m.tempId === tempId ? { ...m, id: String(id) } : m))
       );
     };
 
@@ -125,8 +143,8 @@ export function useChatMessages(roomId, user, socket) {
 
     const handleMessageDeleted = ({ messageId, realId, tempId }) => {
       if (!isMountedRef.current) return;
-      setMessages(prev => {
-        const next = prev.filter(m => {
+      setMessages(prev =>
+        prev.filter(m => {
           const idStr = String(m.id);
           const tempStr = String(m.tempId || '');
           const targetStr = String(messageId);
@@ -134,12 +152,8 @@ export function useChatMessages(roomId, user, socket) {
           if (realId && (idStr === String(realId) || tempStr === String(realId))) return false;
           if (tempId && (idStr === String(tempId) || tempStr === String(tempId))) return false;
           return true;
-        });
-        try {
-          localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
-        } catch (_) {}
-        return next;
-      });
+        })
+      );
     };
 
     socket.on('chat:receive',         handleChatReceive);
@@ -241,13 +255,9 @@ export function useChatMessages(roomId, user, socket) {
   const onDeleteMessage = useCallback((messageId) => {
     if (!messageId) return;
 
-    setMessages(prev => {
-      const next = prev.filter(m => String(m.id) !== String(messageId) && String(m.tempId || '') !== String(messageId));
-      try {
-        localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
-      } catch (_) {}
-      return next;
-    });
+    setMessages(prev =>
+      prev.filter(m => String(m.id) !== String(messageId) && String(m.tempId || '') !== String(messageId))
+    );
 
     if (socket && socket.connected) {
       socket.emit('chat:delete', { roomId, messageId });
