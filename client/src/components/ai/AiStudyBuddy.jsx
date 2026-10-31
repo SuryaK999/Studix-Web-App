@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, GraduationCap, AlertCircle, RotateCcw, Copy, Check, Lightbulb, Calculator, Code, Brain, HelpCircle, Trash2, BookOpen, Sparkles, Zap } from 'lucide-react';
