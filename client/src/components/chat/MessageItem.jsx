@@ -18,6 +18,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useUsersStore } from '@/store/usersStore';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { Tip } from '@/components/ui/tip';
+import { StudyBuddyIcon, StudyBuddyMentionBadge } from '@/components/ui/StudyBuddyIcon';
 
 export const MessageItem = memo(function MessageItem({
   message, isOwn, canDelete, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
@@ -71,6 +72,21 @@ export const MessageItem = memo(function MessageItem({
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  const renderFormattedMessageText = useCallback((text) => {
+    if (!text || typeof text !== 'string') return null;
+    const mentionRegex = /(@ai\b|@studybuddy\b)/gi;
+    if (!mentionRegex.test(text)) {
+      return text;
+    }
+    const parts = text.split(mentionRegex);
+    return parts.map((part, i) => {
+      if (/^@ai$/i.test(part) || /^@studybuddy$/i.test(part)) {
+        return <StudyBuddyMentionBadge key={i} text={part} />;
+      }
+      return part;
+    });
+  }, []);
 
   const getFullUrl = (url) => {
     if (!url) return '';
@@ -308,7 +324,7 @@ export const MessageItem = memo(function MessageItem({
               <MarkdownRenderer content={message.text} />
             </div>
           ) : (
-            <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap">{message.text}</p>
+            <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderFormattedMessageText(message.text)}</p>
           )}
           {message.editedAt && (
             <span className="text-[9px] text-white/30 italic ml-1 select-none">(edited)</span>
@@ -347,8 +363,8 @@ export const MessageItem = memo(function MessageItem({
             isAi ? "border border-purple-500/50 shadow-purple-500/20" : "border border-white/[0.08]"
           )}>
             {isAi ? (
-              <div className="w-full h-full bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white">
-                <Bot className="w-5 h-5 text-white" />
+              <div className="w-full h-full bg-gradient-to-br from-[#1d1635] via-[#141524] to-[#0c0d15] flex items-center justify-center text-white">
+                <StudyBuddyIcon size={20} variant="gradient" />
               </div>
             ) : (
               <>
@@ -377,8 +393,8 @@ export const MessageItem = memo(function MessageItem({
               </span>
             )}
             {isAi && (
-              <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/40 shrink-0 flex items-center gap-1">
-                <Sparkles className="w-2.5 h-2.5" /> AI TUTOR
+              <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/40 shrink-0 flex items-center gap-1 shadow-xs">
+                <StudyBuddyIcon size={10} variant="gradient" /> STUDYBUDDY AI
               </span>
             )}
             {isAdmin && !isAi && (
@@ -527,7 +543,7 @@ export const MessageItem = memo(function MessageItem({
                         }}
                         className="h-5 md:h-6 px-2 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium"
                       >
-                        <Sparkles size={11} className="text-purple-400" />
+                        <StudyBuddyIcon size={12} variant="gradient" />
                         <span className="hidden sm:inline">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
                       </button>
                     </Tip>
