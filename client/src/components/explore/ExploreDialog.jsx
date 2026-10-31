@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useGlobalRoomSearch } from "@/store/globalRoomSearchStore";
 import { useExploreDialog } from "@/store/exploreDialogStore";
 import { useNavigate } from "react-router-dom";
