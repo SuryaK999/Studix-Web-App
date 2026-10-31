@@ -1,12 +1,58 @@
 /**
  * AI StudyBuddy Service
- * Provides educational explanations, study assistance, discussion summarization,
- * and direct chat interactive responses.
+ * Provides educational explanations, multi-model intelligent routing (Groq API),
+ * study assistance, discussion summarization, and direct chat interactive responses.
  */
 
 // Production guards
 const MAX_INPUT_LENGTH = 3000;
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+
+export const AI_MODELS = [
+  {
+    id: 'auto',
+    name: 'Auto (Smart Router)',
+    badge: 'Auto Router',
+    shortName: 'Auto',
+    tag: 'Smart',
+    description: 'Intelligently selects the best model based on query complexity',
+    speed: 'Dynamic',
+    icon: 'Sparkles',
+  },
+  {
+    id: 'llama-3.3-70b-versatile',
+    name: 'Llama 3.3 70B',
+    badge: 'Llama 3.3 70B',
+    shortName: 'Llama 3.3',
+    tag: 'Balanced',
+    description: 'Deep conceptual reasoning & comprehensive tutoring (Meta)',
+    speed: 'Balanced',
+    fallbackList: ['llama-3.3-70b-versatile', 'openai/gpt-oss-120b', 'qwen/qwen3.8-27b'],
+    icon: 'Bot',
+  },
+  {
+    id: 'llama-3.1-8b-instant',
+    name: 'Llama 3.1 8B Instant',
+    badge: 'Llama 3.1 8B',
+    shortName: '8B Instant',
+    tag: 'Fastest',
+    description: 'Ultra-fast low-latency answers & quick definitions (Meta)',
+    speed: '< 200ms',
+    fallbackList: ['llama-3.1-8b-instant', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'],
+    icon: 'Zap',
+  },
+  {
+    id: 'deepseek-r1-distill-llama-70b',
+    name: 'DeepSeek R1 70B',
+    badge: 'DeepSeek R1',
+    shortName: 'DeepSeek R1',
+    tag: 'Reasoning',
+    description: 'Advanced logic, step-by-step math & code debugging',
+    speed: 'Deep Logic',
+    fallbackList: ['deepseek-r1-distill-llama-70b', 'qwen-2.5-32b', 'qwen/qwen3.8-27b', 'openai/gpt-oss-120b'],
+    icon: 'Brain',
+  },
+];
 
 export function isGroqConfigured() {
   const key = import.meta.env.VITE_GROQ_API_KEY;
@@ -14,61 +60,131 @@ export function isGroqConfigured() {
 }
 
 /**
- * Execute chat completion with automatic model fallback across available Groq LLMs
+ * Intelligent Router: Analyzes query complexity and returns the optimal model ID
  */
-export async function executeGroqChatCompletion({ messages, temperature = 0.6, max_tokens = 1500, signal = null }) {
+export function routeModelForQuery(prompt) {
+  if (!prompt || typeof prompt !== 'string') return 'llama-3.3-70b-versatile';
+  const text = prompt.trim();
+  const lower = text.toLowerCase();
+
+  // 1. Code, Math, Algorithms, Debugging -> DeepSeek R1 70B
+  const codePatterns = [
+    /```[\s\S]*?```/,
+    /\b(function|const|let|var|def|class|import|return|export|async|await)\b/,
+    /\b(debug|bug|error|exception|traceback|syntax|stack overflow|refactor|compile|segmentation fault)\b/,
+    /\b(algorithm|big-o|time complexity|space complexity|binary search|dynamic programming|recursion|dfs|bfs|graph|matrix)\b/,
+    /\b(derivative|integral|eigenvalue|calculus|probability|math proof|theorem|equation|polynomial)\b/,
+    /[{}()[\]<>=;]{3,}/,
+  ];
+
+  if (codePatterns.some((pattern) => pattern.test(lower) || pattern.test(text))) {
+    return 'deepseek-r1-distill-llama-70b';
+  }
+
+  // 2. Greetings, Quick Definitions, Short Flash Queries -> Llama 3.1 8B Instant
+  const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(lower);
+  const isQuickDefinition = /^(what is|define|who is|meaning of|translate)\s+[\w\s]{1,35}\??$/i.test(lower);
+  const isShortQuery = text.length <= 60 && !text.includes('\n');
+
+  if (isGreeting || isQuickDefinition || isShortQuery) {
+    return 'llama-3.1-8b-instant';
+  }
+
+  // 3. Deep conceptual explanations, Study plans, Essays, General tutoring -> Llama 3.3 70B Versatile
+  return 'llama-3.3-70b-versatile';
+}
+
+/**
+ * Helper to get the fallback chain for a requested model
+ */
+function getModelChain(requestedModelId, prompt = '') {
+  let effectiveId = requestedModelId;
+  if (!effectiveId || effectiveId === 'auto') {
+    effectiveId = routeModelForQuery(prompt);
+  }
+
+  const modelDef = AI_MODELS.find((m) => m.id === effectiveId);
+  const list = modelDef?.fallbackList ? [...modelDef.fallbackList] : [effectiveId];
+
+  // Always ensure our known active models are in the fallback chain to prevent total failure
+  const robustChain = [...list, 'qwen/qwen3.8-27b', 'openai/gpt-oss-120b', 'openai/gpt-oss-20b'];
+  return {
+    targetModel: effectiveId,
+    chain: Array.from(new Set(robustChain.filter(Boolean))),
+  };
+}
+
+/**
+ * Execute chat completion with intelligent multi-model routing and automatic fallback
+ */
+export async function executeGroqChatCompletion({
+  messages,
+  model = 'auto',
+  temperature = 0.6,
+  max_tokens = 2000,
+  signal = null,
+}) {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey || !apiKey.trim() || apiKey.includes('your_groq_api_key')) {
     return null;
   }
 
-  const configuredModel = import.meta.env.VITE_GROQ_MODEL;
-  const candidateModels = Array.from(new Set([
-    'qwen/qwen3.8-27b',
-    configuredModel,
-    'openai/gpt-oss-120b',
-    'openai/gpt-oss-20b',
-    'llama-3.3-70b-versatile'
-  ].filter(Boolean)));
+  const lastUserMsg = [...(messages || [])].reverse().find((m) => m.role === 'user');
+  const userPrompt = lastUserMsg?.content || '';
+  const { targetModel, chain } = getModelChain(model, userPrompt);
 
   let lastError = null;
-  for (const model of candidateModels) {
+  const startTime = Date.now();
+
+  for (const candidateModel of chain) {
     if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
     try {
       const res = await fetch(GROQ_API_URL, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey.trim()}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${apiKey.trim()}`,
+          'Content-Type': 'application/json',
         },
         signal,
         body: JSON.stringify({
-          model,
+          model: candidateModel,
           messages,
           temperature,
-          max_tokens
-        })
+          max_tokens,
+        }),
       });
 
       if (res.ok) {
         const data = await res.json();
-        let content = data.choices?.[0]?.message?.content?.trim();
+        const choice = data.choices?.[0];
+        let content = choice?.message?.content?.trim();
+        // If content is empty but model reasoning is present (e.g. gpt-oss-120b)
+        if (!content && choice?.message?.reasoning) {
+          content = choice.message.reasoning.trim();
+        }
+
         if (content) {
+          // Strip any raw <think> tags if present
           content = content.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-          return content;
+          const latencyMs = Date.now() - startTime;
+          return {
+            content,
+            modelUsed: targetModel,
+            actualModel: candidateModel,
+            latencyMs,
+          };
         }
       } else {
         const errText = await res.text();
-        console.warn(`[Groq] Model ${model} returned HTTP ${res.status}:`, errText);
-        lastError = new Error(`Groq ${model} status ${res.status}: ${errText}`);
-        if (res.status === 404 || errText.includes('model_not_found') || errText.includes('does not exist')) {
-          continue;
-        }
+        console.warn(`[Groq] Model ${candidateModel} HTTP ${res.status}:`, errText);
+        lastError = new Error(`Groq ${candidateModel} status ${res.status}: ${errText}`);
+        // Immediately try next model in fallback chain
+        continue;
       }
     } catch (err) {
       if (err.name === 'AbortError') throw err;
       lastError = err;
-      console.warn(`[Groq] Model ${model} error:`, err.message);
+      console.warn(`[Groq] Model ${candidateModel} error:`, err.message);
     }
   }
 
@@ -76,7 +192,13 @@ export async function executeGroqChatCompletion({ messages, temperature = 0.6, m
   return null;
 }
 
-export async function callGroqApi({ prompt, context = '', history = [], signal = null }) {
+export async function callGroqApi({
+  prompt,
+  context = '',
+  history = [],
+  model = 'auto',
+  signal = null,
+}) {
   const apiKey = import.meta.env.VITE_GROQ_API_KEY;
   if (!apiKey || !apiKey.trim() || apiKey.includes('your_groq_api_key')) {
     return null;
@@ -121,29 +243,32 @@ CORE GUIDELINES BY QUESTION TYPE:
 6. FORMATTING RULES:
    - Always output valid GitHub-Flavored Markdown (GFM).
    - NEVER output raw HTML tags like <br>, <p>, or <table>.
-${context ? `\nActive Room Context from Peers:\n${context}` : ''}`
+${context ? `\nActive Room Context from Peers:\n${context}` : ''}`,
   };
 
   const formattedHistory = (history || [])
-    .filter(m => (m.content || m.text))
+    .filter((m) => m.content || m.text)
     .slice(-8)
-    .map(m => ({
+    .map((m) => ({
       role: m.role === 'assistant' ? 'assistant' : 'user',
-      content: String(m.content || m.text).slice(0, 1500)
+      content: String(m.content || m.text).slice(0, 1500),
     }));
 
   const messages = [
     systemMessage,
     ...formattedHistory,
-    { role: 'user', content: String(prompt).slice(0, 3000) }
+    { role: 'user', content: String(prompt).slice(0, 3000) },
   ];
 
-  return executeGroqChatCompletion({
+  const result = await executeGroqChatCompletion({
     messages,
+    model,
     temperature: 0.6,
-    max_tokens: 1500,
-    signal
+    max_tokens: 2000,
+    signal,
   });
+
+  return result;
 }
 
 export function sanitizeAiInput(input) {
@@ -172,28 +297,35 @@ No messages have been recorded in **${roomName}** yet. As soon as you and your p
 Start by sharing what you're working on today or ask a question to kick off the session!`;
   }
 
-  const participants = Array.from(new Set(textMessages.map(m => m.senderName || 'Anonymous'))).filter(Boolean);
-  const questions = textMessages.filter(m => m.text && m.text.includes('?')).slice(-5);
+  const participants = Array.from(new Set(textMessages.map((m) => m.senderName || 'Anonymous'))).filter(Boolean);
+  const questions = textMessages.filter((m) => m.text && m.text.includes('?')).slice(-5);
 
-  // Extract meaningful keywords from actual messages
-  const allText = textMessages.map(m => m.text || '').join(' ');
+  const allText = textMessages.map((m) => m.text || '').join(' ');
   const wordCounts = {};
-  allText.toLowerCase().replace(/[^a-z0-9_\-\s]/g, '').split(/\s+/).forEach(w => {
-    if (w.length > 3 && !['about', 'there', 'would', 'could', 'should', 'think', 'where', 'which', 'what', 'have', 'from', 'this', 'that', 'with', 'your', 'just', 'been', 'were', 'hello', 'good', 'some'].includes(w)) {
-      wordCounts[w] = (wordCounts[w] || 0) + 1;
-    }
-  });
+  allText
+    .toLowerCase()
+    .replace(/[^a-z0-9_\-\s]/g, '')
+    .split(/\s+/)
+    .forEach((w) => {
+      if (
+        w.length > 3 &&
+        ![
+          'about', 'there', 'would', 'could', 'should', 'think', 'where', 'which',
+          'what', 'have', 'from', 'this', 'that', 'with', 'your', 'just', 'been',
+          'were', 'hello', 'good', 'some',
+        ].includes(w)
+      ) {
+        wordCounts[w] = (wordCounts[w] || 0) + 1;
+      }
+    });
 
   const topKeywords = Object.entries(wordCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([w]) => w.charAt(0).toUpperCase() + w.slice(1));
 
-  // Detect explicit task commitments (e.g. "I will", "let's finish", "need to push")
   const commitmentPatterns = [/\b(i will|i'll|let's|we need to|todo:|task:)\b/i];
-  const detectedTasks = textMessages
-    .filter(m => commitmentPatterns.some(p => p.test(m.text || '')))
-    .slice(-4);
+  const detectedTasks = textMessages.filter((m) => commitmentPatterns.some((p) => p.test(m.text || ''))).slice(-4);
 
   const isBriefChat = textMessages.length <= 10;
   const participantStr = participants.length > 0 ? participants.join(', ') : 'Study group';
@@ -207,7 +339,7 @@ Start by sharing what you're working on today or ask a question to kick off the 
 
   out += `### Key Discussion Points\n`;
   if (questions.length > 0) {
-    questions.forEach(q => {
+    questions.forEach((q) => {
       out += `- **Question raised by ${q.senderName || 'peer'}**: *"${q.text.slice(0, 120)}"${q.text.length > 120 ? '...' : ''}*\n`;
     });
   } else if (topKeywords.length > 0) {
@@ -235,10 +367,10 @@ Start by sharing what you're working on today or ask a question to kick off the 
 }
 
 /**
- * Summarize a list of chat messages into structured study notes (sync compatibility)
+ * Summarize a list of chat messages into structured study notes
  */
 export function summarizeChatDiscussion(messages = [], roomName = 'Study Room') {
-  const textMessages = (messages || []).filter(m => m.text && !m.text.startsWith('Voice message'));
+  const textMessages = (messages || []).filter((m) => m.text && !m.text.startsWith('Voice message'));
   return buildSmartFallbackSummary(textMessages, roomName);
 }
 
@@ -246,17 +378,16 @@ export function summarizeChatDiscussion(messages = [], roomName = 'Study Room') 
  * Generate humanized, grounded chat summary using Groq LPU with zero hallucination
  */
 export async function generateExecutiveChatSummary({ messages = [], roomName = 'Study Room', signal = null }) {
-  const textMessages = (messages || []).filter(m => m.text && !m.text.startsWith('Voice message'));
+  const textMessages = (messages || []).filter((m) => m.text && !m.text.startsWith('Voice message'));
   if (textMessages.length === 0) {
     return buildSmartFallbackSummary([], roomName);
   }
 
   if (isGroqConfigured()) {
     try {
-      // Provide up to last 40 messages formatted cleanly in chronological order
       const transcript = textMessages
         .slice(-40)
-        .map(m => `[${m.senderName || 'Member'}]: ${m.text}`)
+        .map((m) => `[${m.senderName || 'Member'}]: ${m.text}`)
         .join('\n');
 
       const systemPrompt = `You are a thoughtful, observant study partner on Studix (a real-time collaborative study platform).
@@ -284,10 +415,9 @@ A concise 2-3 sentence overview of what actually happened, who participated, and
 - If the chat was very brief (just greetings or short talk), 1-2 concise bullets are sufficient.
 
 ### Action Items
-- List concrete tasks or promises that participants EXPLICITLY agreed to do (e.g., "1. Finish exercise 3 - *Owner: Surya*").
+- List concrete tasks or promises that participants EXPLICITLY agreed to do.
 - If NO tasks or commitments were made in the conversation, you MUST write:
   *No pending action items or tasks were assigned in this discussion.*
-  (NEVER fabricate tasks!).
 
 ### Next Study Focus
 One helpful, encouraging study tip or concept suggestion directly relevant to the subject of "${roomName}".`;
@@ -295,15 +425,16 @@ One helpful, encouraging study tip or concept suggestion directly relevant to th
       const aiSummary = await executeGroqChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: `Here is the discussion transcript from "${roomName}":\n\n${transcript}` }
+          { role: 'user', content: `Here is the discussion transcript from "${roomName}":\n\n${transcript}` },
         ],
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.3,
         max_tokens: 1200,
-        signal
+        signal,
       });
 
-      if (aiSummary) {
-        return aiSummary;
+      if (aiSummary?.content) {
+        return aiSummary.content;
       }
     } catch (err) {
       if (err.name === 'AbortError') throw err;
@@ -311,7 +442,6 @@ One helpful, encouraging study tip or concept suggestion directly relevant to th
     }
   }
 
-  // Graceful fallback
   return buildSmartFallbackSummary(textMessages, roomName);
 }
 
@@ -322,10 +452,9 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
   const cleanInput = sanitizeAiInput(userInput);
   const lower = cleanInput.toLowerCase();
 
-  // Extract recent context from room
   const contextSnippet = recentMessages
     .slice(-6)
-    .map(m => `${m.senderName}: ${m.text}`)
+    .map((m) => `${m.senderName}: ${m.text}`)
     .join(' | ');
 
   const rawPrompt = cleanInput
@@ -335,42 +464,49 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
     .replace(/^ai:\s*/i, '')
     .trim();
 
-  // 0. Greeting & Casual Chitchat Detection
-  const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(rawPrompt) || rawPrompt.length <= 3;
+  const isGreeting =
+    /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(rawPrompt) ||
+    rawPrompt.length <= 3;
 
-  // If Groq API is configured, use high-speed Llama 3.3 for intelligent contextual answer
   if (isGroqConfigured()) {
     try {
       const groqAnswer = await callGroqApi({
         prompt: cleanInput,
         context: contextSnippet,
-        signal: options?.signal
+        model: options?.model || 'auto',
+        signal: options?.signal,
       });
-      if (groqAnswer) return groqAnswer;
+      if (groqAnswer?.content) return groqAnswer.content;
+      if (typeof groqAnswer === 'string') return groqAnswer;
     } catch (err) {
       console.warn('[AI Service] Groq response error, falling back to local template:', err.message);
     }
   }
 
-  // Fallback handler for greetings (NEVER output tables or formal definition breakdowns for hi)
   if (isGreeting) {
-    return `### Welcome to StudyBuddy\n\n` +
+    return (
+      `### Welcome to StudyBuddy\n\n` +
       `I'm **StudyBuddy AI**, your real-time academic companion on Studix.\n\n` +
       `What are we studying or working on today? Here's how I can help:\n` +
       `- **Explain concepts** with clear real-world analogies (\`@ai explain <topic>\`)\n` +
       `- **Debug & write code** with step-by-step fixes (\`@ai code <issue>\`)\n` +
       `- **Test your knowledge** with a quick quiz (\`@ai quiz me\`)\n` +
       `- **Summarize room discussions** anytime (\`@ai summarize\`)\n\n` +
-      `Ask a question or tag me anytime with \`@ai\`! 🚀`;
+      `Ask a question or tag me anytime with \`@ai\`! 🚀`
+    );
   }
 
-  // 1. Direct Summarization Request
   if (lower.includes('summarize') || lower.includes('summary') || lower.includes('recap')) {
     return generateExecutiveChatSummary({ messages: recentMessages, roomName: 'Study Room', signal: options?.signal });
   }
 
-  // 2. Direct Explain Request
-  if (lower.includes('explain') || lower.includes('what is') || lower.includes('how does') || lower.includes('break down') || lower.includes('define')) {
+  if (
+    lower.includes('explain') ||
+    lower.includes('what is') ||
+    lower.includes('how does') ||
+    lower.includes('break down') ||
+    lower.includes('define')
+  ) {
     const topic = cleanInput
       .replace(/^@ai\s*/i, '')
       .replace(/^@studybuddy\s*/i, '')
@@ -381,47 +517,59 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
       .trim();
 
     if (!topic || /^(hi+|hello+|hey+|yo+|sup)\b/i.test(topic) || topic.length <= 3) {
-      return `### Ready to Study\n\n` +
+      return (
+        `### Ready to Study\n\n` +
         `Tell me what topic or concept you'd like to explore today! For example:\n` +
         `- \`@ai explain async/await in JavaScript\`\n` +
         `- \`@ai explain binary search trees\`\n` +
         `- \`@ai explain the difference between TCP and UDP\`\n\n` +
-        `I'll break it down with clear explanations and examples! 💡`;
+        `I'll break it down with clear explanations and examples! 💡`
+      );
     }
 
-    return `### Concept Overview: ${topic}\n\n` +
+    return (
+      `### Concept Overview: ${topic}\n\n` +
       `Here is a clear, step-by-step breakdown:\n\n` +
       `1. **Core Idea:** **${topic}** is best understood through its fundamental purpose and practical application.\n` +
       `2. **Real-world Analogy:** Think of it like a coordinated system where each component has a single, well-defined responsibility.\n` +
       `3. **Practical Application:** Connect this concept directly to what you are studying or building right now.\n\n` +
       `**🎯 Key Takeaway:** Understanding *why* it works makes remembering *how* it works effortless.\n\n` +
-      `*Want me to give a code example, quiz you on this, or simplify it further? Just ask \`@ai quiz me\`!*`;
+      `*Want me to give a code example, quiz you on this, or simplify it further? Just ask \`@ai quiz me\`!*`
+    );
   }
 
-  // 3. Comparison & Differences
   if (lower.includes(' vs ') || lower.includes('difference between') || lower.includes('compare')) {
-    return `### Comparison & Key Differences\n\n` +
+    return (
+      `### Comparison & Key Differences\n\n` +
       `| Dimension | Option A | Option B |\n` +
       `|---|---|---|\n` +
       `| **Primary Purpose** | Specialized for specific workflows | General-purpose, flexible usage |\n` +
       `| **Performance** | Optimized for lower overhead | Balances ease of use with speed |\n` +
       `| **When to Choose** | When strict guarantees are required | Rapid prototyping and standard builds |\n\n` +
-      `**💡 Recommendation:** Pick the approach that matches your project's scaling goals and team conventions.`;
+      `**💡 Recommendation:** Pick the approach that matches your project's scaling goals and team conventions.`
+    );
   }
 
-  // 4. Quiz / Knowledge Check
   if (lower.includes('quiz') || lower.includes('test me') || lower.includes('practice question')) {
-    return `### Quick Knowledge Check\n\n` +
+    return (
+      `### Quick Knowledge Check\n\n` +
       `Test your understanding with these practice questions:\n\n` +
       `**1.** What is the primary difference between synchronous and asynchronous operations?\n` +
       `**2.** Why is time complexity (Big-O) crucial when scaling algorithms?\n` +
       `**3.** What is the benefit of breaking state down into smaller, predictable units?\n\n` +
-      `*Reply in chat with your answers, and I'll review them for you!* 🎯`;
+      `*Reply in chat with your answers, and I'll review them for you!* 🎯`
+    );
   }
 
-  // 5. Code / Debugging Help
-  if (lower.includes('code') || lower.includes('debug') || lower.includes('error') || lower.includes('bug') || lower.includes('syntax')) {
-    return `### Code & Debugging Assistant\n\n` +
+  if (
+    lower.includes('code') ||
+    lower.includes('debug') ||
+    lower.includes('error') ||
+    lower.includes('bug') ||
+    lower.includes('syntax')
+  ) {
+    return (
+      `### Code & Debugging Assistant\n\n` +
       `Here is how to isolate and fix this issue:\n\n` +
       `1. **Identify the exact error line:** Check your stack trace and console output.\n` +
       `2. **Validate your data types:** Ensure values aren't \`undefined\` or \`null\` prior to access.\n` +
@@ -433,24 +581,27 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
       `  return fallback;\n` +
       `}\n` +
       `\`\`\`\n\n` +
-      `Paste the specific snippet or error message here and I'll debug it with you! 🔍`;
+      `Paste the specific snippet or error message here and I'll debug it with you! 🔍`
+    );
   }
 
-  // 6. Simplify / ELI5
   if (lower.includes('simplif') || lower.includes('eli5') || lower.includes('simple terms')) {
-    return `### Simplified Explanation\n\n` +
+    return (
+      `### Simplified Explanation\n\n` +
       `Imagine you're organizing items with labeled boxes 📦:\n` +
       `- Each box has a specific purpose.\n` +
       `- You only open the box when you need what's inside.\n` +
       `- If a box is missing or misplaced, you check your inventory first.\n\n` +
-      `Keep it simple, step-by-step, and don't try to memorize everything at once. What part should we zoom in on? 🌟`;
+      `Keep it simple, step-by-step, and don't try to memorize everything at once. What part should we zoom in on? 🌟`
+    );
   }
 
-  // Default responsive tutor
-  return `### StudyBuddy AI\n\n` +
+  return (
+    `### StudyBuddy AI\n\n` +
     `Great study topic: **${rawPrompt || 'your current lesson'}**!\n\n` +
     `- **Direct Answer:** Let's break this down clearly for your study group.\n` +
     `- **Tip:** You can ask me to \`@ai explain <topic>\`, \`@ai code <problem>\`, or \`@ai quiz me\` anytime directly in this chat!\n` +
     (contextSnippet ? `\n*📎 Context from your study room has been referenced.*` : '') +
-    `\n\nWhat would you like to explore next? 🚀`;
+    `\n\nWhat would you like to explore next? 🚀`
+  );
 }
