@@ -10,7 +10,6 @@ import {
   Paperclip,
   Loader2,
   Mic,
-  Code,
   Reply,
   FileText,
   Sparkles,
@@ -294,7 +293,7 @@ export function ChatPanel({ roomId, roomData }) {
       }
       window.removeEventListener('studix:action', handleGlobalAction);
     };
-  }, [socket, user?.uid]);
+  }, [socket, user?.uid, roomId]);
 
   const handleInputChange = useCallback((e) => {
     const text = e.target.value;
