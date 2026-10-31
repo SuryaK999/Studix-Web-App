@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { differenceInMinutes } from 'date-fns';
+import { toast } from 'sonner';
 import {
   Send,
   Image,
@@ -15,248 +14,133 @@ import {
   Sparkles,
   X,
   ChevronUp,
-  Plus
+  Plus,
 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
+import { usePresence } from '@/hooks/usePresence';
+import { useSocket } from '@/hooks/useSocket';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+
 import { MessageItem } from './MessageItem';
 import { TypingIndicator } from './TypingIndicator';
-import { useSocket } from '@/hooks/useSocket';
-import { db, storage } from '@/lib/firebase/config';
-import { doc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { useAudioRecorder } from '@/hooks/useAudioRecorder';
-import { storageService } from '@/lib/storage/storageService';
-import { saveVoice } from '@/services/voiceStorageService';
-import { toast } from 'sonner';
-import { logger } from '@/lib/logger';
-import { fetchMessages } from '@/services/api';
-import { generateExecutiveChatSummary, generateAiStudyResponse } from '@/services/aiService';
 import { ChatSummaryModal } from './ChatSummaryModal';
-import { differenceInMinutes } from 'date-fns';
+
+import { useChatMessages } from './hooks/useChatMessages';
+import { useChatUploads } from './hooks/useChatUploads';
+import { useChatAiStudy } from './hooks/useChatAiStudy';
+import { useChatScroll } from './hooks/useChatScroll';
 
 const PAGE_SIZE = 50;
 
-export function ChatPanel({ roomId, roomData }) {
+export function ChatPanel({ roomId, roomData, className }) {
   const { user } = useAuth();
-  const roomName = useMemo(() => roomData?.name || 'Study Room', [roomData?.name]);
-  const isAdmin = useMemo(() => roomData?.adminIds?.includes(user?.uid) || roomData?.creatorId === user?.uid || roomData?.createdBy === user?.uid, [roomData, user?.uid]);
-  const avatarUrl = roomData?.avatarUrl;
+  usePresence(roomId);
 
-  const [messages, setMessages] = useState(() => {
-    if (!roomId) return [];
-    try {
-      const cached = localStorage.getItem(`studix_chat_${roomId}`);
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const roomName = useMemo(() => roomData?.name || 'Study Room', [roomData?.name]);
+  const isAdmin = useMemo(
+    () =>
+      Boolean(
+        roomData?.adminIds?.includes(user?.uid) ||
+        roomData?.creatorId === user?.uid ||
+        roomData?.createdBy === user?.uid
+      ),
+    [roomData, user?.uid]
+  );
+  const avatarUrl = roomData?.avatarUrl;
 
   const [inputText, setInputText] = useState('');
   const [typingUsers, setTypingUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
-  const [showSummaryModal, setShowSummaryModal] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [isSummarizing, setIsSummarizing] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
-  const [loadingOlder, setLoadingOlder] = useState(false);
-  const [hasMoreMessages, setHasMoreMessages] = useState(true);
-  const [showScrollBottom, setShowScrollBottom] = useState(false);
   const [replyTarget, setReplyTarget] = useState(null);
 
-  const oldestTimestampRef = useRef(null);
-
-  const scrollRef = useRef(null);
   const { socket } = useSocket(roomId);
   const typingEmittedRef = useRef(false);
   const typingTimeoutRef = useRef(undefined);
-  const { isRecording, recordingDuration, audioBlob, startRecording, stopRecording, clearRecording } = useAudioRecorder();
 
-  useEffect(() => {
-    if (roomId && messages.length > 0) {
-      try {
-        localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(messages.slice(-80)));
-      } catch (_) {}
-    }
-  }, [roomId, messages]);
+  const {
+    isRecording,
+    recordingDuration,
+    audioBlob,
+    startRecording,
+    stopRecording,
+    clearRecording,
+  } = useAudioRecorder();
 
-  useEffect(() => {
-    if (!roomId) return;
-    let cancelled = false;
+  // SRP Hook 1: Messages management
+  const {
+    messages,
+    setMessages,
+    loadingOlder,
+    hasMoreMessages,
+    loadOlderMessages,
+    sendMessage,
+    onEditMessage,
+    onDeleteMessage,
+  } = useChatMessages(roomId, user, socket);
 
-    const load = async () => {
-      try {
-        const { messages: msgs, hasMore } = await fetchMessages(roomId);
-        if (cancelled) return;
-        setMessages(prev => {
-          // Server messages are authoritative; deleted messages must never be restored from cache
-          const recentTemps = prev.filter(m => 
-            String(m.id).startsWith('temp-') && 
-            (Date.now() - new Date(m.createdAt || 0).getTime() < 15000)
-          );
-          const combined = [...msgs, ...recentTemps];
-          try {
-            localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(combined.slice(-80)));
-          } catch (_) {}
-          return combined;
-        });
-        setHasMoreMessages(hasMore);
-        if (msgs.length > 0) {
-          oldestTimestampRef.current = msgs[0].createdAt ?? null;
-        }
-      } catch (err) {
-        logger.error('Failed to load messages', 'ChatPanel', err);
-      }
-    };
+  // SRP Hook 2: Radix scroll handling
+  const {
+    scrollRef,
+    showScrollBottom,
+    scrollToBottom,
+  } = useChatScroll(messages);
 
-    load();
-    return () => { cancelled = true; };
-  }, [roomId]);
+  // SRP Hook 3: AI interactions & Executive summary
+  const {
+    showSummaryModal,
+    setShowSummaryModal,
+    summary,
+    isSummarizing,
+    generateSummary,
+    triggerAiStudyBuddyResponse,
+  } = useChatAiStudy({
+    roomId,
+    roomName,
+    messages,
+    setMessages,
+    socket,
+    sendMessage: (text) => sendMessage(text, null),
+    scrollToBottom,
+  });
 
-  const scrollToBottom = useCallback((behavior = 'smooth') => {
-    if (scrollRef.current) {
-      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTo({ top: scrollContainer.scrollHeight, behavior });
-      }
-    }
-  }, []);
+  // SRP Hook 4: File, Voice, and Avatar uploads
+  const {
+    isUploading,
+    isUploadingAvatar,
+    showAttachmentMenu,
+    setShowAttachmentMenu,
+    handleFileUpload,
+    sendVoiceMessage: executeVoiceSend,
+    uploadRoomAvatar: executeAvatarUpload,
+  } = useChatUploads(roomId, user, socket, setMessages);
 
-  const handleScroll = useCallback(() => {
-    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (!scrollContainer) return;
-    const isAtBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 150;
-    setShowScrollBottom(!isAtBottom);
-  }, []);
-
-  useEffect(() => {
-    const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (scrollContainer) {
-      scrollContainer.addEventListener('scroll', handleScroll);
-      return () => scrollContainer.removeEventListener('scroll', handleScroll);
-    }
-  }, [handleScroll]);
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      const scrollContainer = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-      if (!scrollContainer) return;
-      
-      const isNearBottom = scrollContainer.scrollHeight - scrollContainer.scrollTop - scrollContainer.clientHeight < 250;
-      
-      if (messages.length <= PAGE_SIZE || isNearBottom) {
-        scrollToBottom(messages.length <= PAGE_SIZE ? 'auto' : 'smooth');
-      }
-    }
-  }, [messages.length, scrollToBottom]);
-
-  const loadOlderMessages = useCallback(async () => {
-    if (loadingOlder || !hasMoreMessages || !oldestTimestampRef.current) return;
-    setLoadingOlder(true);
-    try {
-      const { messages: older, hasMore } = await fetchMessages(roomId, oldestTimestampRef.current);
-      if (older.length === 0) {
-        setHasMoreMessages(false);
-        return;
-      }
-      
-      setMessages(prev => {
-        const existingIds = new Set(prev.map(m => String(m.id)));
-        const unique = older.filter(m => !existingIds.has(String(m.id)));
-        return [...unique, ...prev];
-      });
-      setHasMoreMessages(hasMore);
-      if (older.length > 0) {
-        oldestTimestampRef.current = older[0].createdAt ?? null;
-      }
-    } catch (err) {
-      logger.error('Failed to load older messages', 'ChatPanel', err);
-      toast.error('Failed to load older messages.');
-    } finally {
-      setLoadingOlder(false);
-    }
-  }, [roomId, loadingOlder, hasMoreMessages]);
-
+  // Typing updates from socket
   useEffect(() => {
     if (!socket) return;
 
     const handleTypingUpdate = ({ userId, typingList }) => {
       if (userId === user?.uid) return;
-      setTypingUsers(typingList);
+      setTypingUsers(typingList || []);
     };
 
-    const handleChatReceive = (msg) => {
-      setMessages(prev => {
-        
-        const isDupe = prev.some(m => {
-          if (m.id && msg.id && String(m.id) === String(msg.id)) return true;
-          if (msg.tempId && String(m.id) === msg.tempId) return true;
-          return false;
-        });
-        
-        if (isDupe) return prev;
-        return [...prev, msg];
-      });
+    socket.on('typing:update', handleTypingUpdate);
+    return () => {
+      socket.off('typing:update', handleTypingUpdate);
     };
+  }, [socket, user?.uid]);
 
-    const handleChatSaved = ({ tempId, id }) => {
-      setMessages(prev =>
-        prev.map(m => (String(m.id) === tempId ? { ...m, id } : m))
-      );
-    };
-
-    const handleSaveError = ({ tempId }) => {
-      toast.error('Message failed to save — please try again.');
-      setMessages(prev => prev.filter(m => String(m.id) !== tempId));
-    };
-
-    const handleReactionUpdate = ({ messageId, reactions, reactionUsers }) => {
-      setMessages(prev =>
-        prev.map(m => (String(m.id) === messageId ? { ...m, reactions, reactionUsers } : m))
-      );
-    };
-
-    const handleMessageEdited = ({ messageId, text, editedAt }) => {
-      setMessages(prev =>
-        prev.map(m => (String(m.id) === messageId ? { ...m, text, editedAt } : m))
-      );
-    };
-
-    const handleMessageDeleted = ({ messageId, realId, tempId }) => {
-      setMessages(prev => {
-        const next = prev.filter(m => {
-          const idStr = String(m.id);
-          const tempStr = String(m.tempId || '');
-          const targetStr = String(messageId);
-          if (idStr === targetStr || tempStr === targetStr) return false;
-          if (realId && (idStr === String(realId) || tempStr === String(realId))) return false;
-          if (tempId && (idStr === String(tempId) || tempStr === String(tempId))) return false;
-          return true;
-        });
-        try {
-          localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
-        } catch (_) {}
-        return next;
-      });
-    };
-
-    socket.on('typing:update',        handleTypingUpdate);
-    socket.on('chat:receive',         handleChatReceive);
-    socket.on('chat:saved',           handleChatSaved);
-    socket.on('chat:save_error',      handleSaveError);
-    socket.on('chat:reaction_update', handleReactionUpdate);
-    socket.on('chat:message_edited',  handleMessageEdited);
-    socket.on('chat:message_deleted', handleMessageDeleted);
-
+  // Radial menu & Global actions
+  useEffect(() => {
     const handleRadialAction = (e) => {
       const { action } = e.detail || {};
-      
-      if (action === 'chat-read') {
+      if (action === 'chat-read' && socket) {
         socket.emit('chat:read', { roomId });
         toast.success('Conversation marked as read');
       }
-      
       if (action === 'chat-settings') {
         toast.info('Chat settings coming soon');
       }
@@ -264,37 +148,28 @@ export function ChatPanel({ roomId, roomData }) {
 
     const handleGlobalAction = (e) => {
       const { action, message } = e.detail || {};
-      if (action === 'msg-reply') {
+      if (action === 'msg-reply' && message) {
         setReplyTarget(message);
-        
         const input = document.querySelector('.studix-input');
         input?.focus();
       }
     };
-    
+
     const chatEl = document.querySelector('[data-radial-context="chat"]');
     if (chatEl) {
       chatEl.addEventListener('radial-action', handleRadialAction);
     }
-    
     window.addEventListener('studix:action', handleGlobalAction);
 
     return () => {
-      socket.off('typing:update',        handleTypingUpdate);
-      socket.off('chat:receive',         handleChatReceive);
-      socket.off('chat:saved',           handleChatSaved);
-      socket.off('chat:save_error',      handleSaveError);
-      socket.off('chat:reaction_update', handleReactionUpdate);
-      socket.off('chat:message_edited',  handleMessageEdited);
-      socket.off('chat:message_deleted', handleMessageDeleted);
-      
       if (chatEl) {
         chatEl.removeEventListener('radial-action', handleRadialAction);
       }
       window.removeEventListener('studix:action', handleGlobalAction);
     };
-  }, [socket, user?.uid, roomId]);
+  }, [socket, roomId]);
 
+  // Input typing emitter with debounce
   const handleInputChange = useCallback((e) => {
     const text = e.target.value;
     setInputText(text);
@@ -305,7 +180,7 @@ export function ChatPanel({ roomId, roomData }) {
       typingEmittedRef.current = true;
       socket.emit('typing:start', {
         roomId,
-        userId:   user.uid,
+        userId: user.uid,
         userName: user.displayName || 'Anonymous',
       });
     }
@@ -327,365 +202,82 @@ export function ChatPanel({ roomId, roomData }) {
     }
   }, [socket, roomId, user]);
 
-  const sendMessage = useCallback(async (text = inputText) => {
-    const trimmed = text.trim();
+  // Message submission handler
+  const handleSendMessage = useCallback(async (textToSend = inputText) => {
+    const trimmed = textToSend.trim();
     if (!trimmed || !user || !socket || isLoading) return;
 
     setIsLoading(true);
     setInputText('');
-
-    const tempId  = `temp-${Date.now()}`;
-    const payload = {
-      tempId,
-      type:           'text',
-      text:           trimmed,
-      senderId:       user.uid,
-      senderName:     user.displayName || 'Anonymous',
-      senderUsername: user.username || user.uniqueId || '',
-      senderPhotoURL: user.photoURL,
-      reactions:      {},
-      replyTo:        replyTarget ? {
-                        id: replyTarget.id,
-                        text: replyTarget.text,
-                        senderName: replyTarget.senderName
-                      } : null,
-      createdAt:      new Date().toISOString(),
-    };
-
-    setMessages(prev => [...prev, { id: tempId, ...payload }]);
 
     if (typingEmittedRef.current) {
       typingEmittedRef.current = false;
       socket.emit('typing:stop', { roomId, userId: user.uid });
     }
 
-    socket.emit('chat:send', { roomId, message: payload });
-
+    const currentReply = replyTarget;
     setReplyTarget(null);
+
+    const result = sendMessage(trimmed, currentReply);
     setIsLoading(false);
 
     setTimeout(() => scrollToBottom('smooth'), 100);
 
-    // AI Mention Detection (@ai, @studybuddy, /ai, ai:)
-    const isAiQuery = /(@ai|@studybuddy|\/ai|^ai:)/i.test(trimmed);
-    if (isAiQuery) {
-      setTimeout(async () => {
-        try {
-          const aiText = await generateAiStudyResponse(trimmed, [...messages, payload]);
-          const aiTempId = `ai-${Date.now()}`;
-          const aiPayload = {
-            tempId:         aiTempId,
-            type:           'text',
-            text:           aiText,
-            senderId:       'ai-studybuddy',
-            senderName:     'StudyBuddy AI',
-            senderUsername: 'studybuddy',
-            isAi:           true,
-            reactions:      {},
-            replyTo: {
-              id:         tempId,
-              text:       trimmed.length > 80 ? trimmed.slice(0, 77) + '...' : trimmed,
-              senderName: user.displayName || 'Anonymous'
-            },
-            createdAt:      new Date().toISOString(),
-          };
-
-          setMessages(prev => [...prev, { id: aiTempId, ...aiPayload }]);
-          socket.emit('chat:send', { roomId, message: aiPayload });
-          setTimeout(() => scrollToBottom('smooth'), 100);
-        } catch (err) {
-          logger.error('Failed to generate AI response in chat', 'ChatPanel', err);
-        }
-      }, 500);
+    if (result) {
+      triggerAiStudyBuddyResponse(
+        trimmed,
+        [...messages, result.payload],
+        result.tempId,
+        user.displayName || 'Anonymous'
+      );
     }
-  }, [inputText, user, roomId, socket, isLoading, replyTarget, messages, scrollToBottom]);
-
-  // Handle contextual AI assistance triggered from message items
-  useEffect(() => {
-    const handleAiExplain = (e) => {
-      const msg = e.detail?.message;
-      if (!msg || !msg.text) return;
-
-      // Clean off existing prompt prefixes and quotation wraps
-      let cleanText = msg.text
-        .replace(/^@ai\s*/gi, '')
-        .replace(/^@studybuddy\s*/gi, '')
-        .replace(/^\/ai\s*/gi, '')
-        .replace(/^Explain this concept clearly with examples:\s*"?/gi, '')
-        .replace(/^Help analyze and debug this code\/error:\s*"?/gi, '')
-        .replace(/^Help answer and break down this question for our study group:\s*"?/gi, '')
-        .replace(/^Explain:\s*"?/gi, '')
-        .replace(/^"?\s*$/g, '')
-        .replace(/"\s*$/g, '')
-        .trim();
-
-      if (!cleanText) return;
-
-      const isGreeting = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(cleanText) || cleanText.length <= 4;
-      const isQuestion = cleanText.endsWith('?') || /^(what|how|why|when|where|which|who|can|does|is|are)\b/i.test(cleanText);
-      const isCode = /[{};=>]|\b(function|const|let|var|class|import|return|error|traceback|def)\b/i.test(cleanText);
-
-      let query;
-      if (isGreeting) {
-        query = `@ai Hey! Greet our study room and suggest a few great topics we can study together today!`;
-      } else if (isCode) {
-        query = `@ai Help analyze and debug this code/error: "${cleanText.slice(0, 160)}"`;
-      } else if (isQuestion) {
-        query = `@ai Help answer this question for our study group: "${cleanText.slice(0, 160)}"`;
-      } else {
-        query = `@ai Explain: "${cleanText.slice(0, 160)}"`;
-      }
-
-      sendMessage(query);
-    };
-
-    window.addEventListener('studix:ai-explain', handleAiExplain);
-    return () => window.removeEventListener('studix:ai-explain', handleAiExplain);
-  }, [sendMessage]);
-
-  const handleFileUpload = useCallback(async (file, type) => {
-    if (!user || !socket) return;
-
-    if (!file || file.size === 0) {
-      toast.error('Selected file is empty.');
-      return;
-    }
-    const maxSize = 25 * 1024 * 1024; 
-    if (file.size > maxSize) {
-      toast.error(`File too large. Max size: ${maxSize / 1024 / 1024}MB`);
-      return;
-    }
-    if (type === 'image' && !file.type.startsWith('image/')) {
-      toast.error('Please select an image file.');
-      return;
-    }
-
-    const tempId = `temp-${Date.now()}`;
-
-    const placeholder = {
-      id: tempId,
-      tempId,
-      type,
-      text: type === 'image' ? 'Uploading image...' : `Uploading ${file.name}...`,
-      senderId: user.uid,
-      senderName: user.displayName || 'Anonymous',
-      senderPhotoURL: user.photoURL,
-      reactions: {},
-      createdAt: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, placeholder]);
-    setIsUploading(true);
-    setShowAttachmentMenu(false);
-
-    const attemptUpload = async (retryCount) => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); 
-
-      try {
-        const result = await storageService.uploadFile(file, {
-          roomId,
-          folder: type === 'image' ? 'images' : 'files',
-          compress: type === 'image',
-        });
-        clearTimeout(timeoutId);
-        return result;
-      } catch (err) {
-        clearTimeout(timeoutId);
-        if (retryCount > 0) {
-          logger.error(`File upload attempt failed, retrying (${retryCount} left)`, 'ChatPanel', err);
-          return attemptUpload(retryCount - 1);
-        }
-        throw err;
-      }
-    };
-
-    try {
-      const result = await attemptUpload(1);
-
-      const payload = {
-        tempId,
-        type,
-        text: type === 'image' ? '' : `Shared ${file.type.split('/')[1] || 'file'}`,
-        fileUrl: result.url,
-        fileName: result.fileName,
-        fileSize: result.fileSize,
-        senderId: user.uid,
-        senderName: user.displayName || 'Anonymous',
-        senderPhotoURL: user.photoURL,
-        reactions: {},
-        createdAt: new Date().toISOString(),
-      };
-
-      setMessages(prev => prev.map(m => m.id === tempId ? { ...m, ...payload, id: tempId } : m));
-      socket.emit('chat:send', { roomId, message: payload });
-    } catch (error) {
-      
-      setMessages(prev => prev.filter(m => m.id !== tempId));
-      logger.error('File upload error', 'ChatPanel', error);
-      toast.error('Failed to upload file. Please try again.');
-    } finally {
-      setIsUploading(false);
-    }
-  }, [user, roomId, socket]);
-
-  const sendVoiceMessage = useCallback(async () => {
-    if (!audioBlob || !user || !socket) return;
-
-    if (audioBlob.size === 0) {
-      toast.error('Voice recording is empty. Please try again.');
-      clearRecording();
-      return;
-    }
-
-    setIsUploading(true);
-    const toastId = toast.loading('Sending voice message...');
-
-    try {
-      const { id, url } = await saveVoice(audioBlob);
-
-      const payload = {
-        tempId:         `temp-${Date.now()}`,
-        type:           'voice',
-        text:           'Voice message',
-        voice: {
-          id,
-          url,
-          duration: recordingDuration,
-        },
-        fileUrl:        url, 
-        fileName:       `voice-${id}.webm`,
-        fileSize:       audioBlob.size,
-        fileDuration:   recordingDuration,
-        senderId:       user.uid,
-        senderName:     user.displayName || 'Anonymous',
-        senderPhotoURL: user.photoURL,
-        reactions:      {},
-        createdAt:      new Date().toISOString(),
-      };
-
-      setMessages(prev => [...prev, { id: payload.tempId, ...payload }]);
-      socket.emit('chat:send', { roomId, message: payload });
-      toast.dismiss(toastId);
-      clearRecording();
-    } catch (error) {
-      console.error('[VoiceUpload] Pipeline failed:', error);
-      toast.dismiss(toastId);
-      toast.error(`Upload failed: ${error.message}`);
-    } finally {
-      setIsUploading(false);
-    }
-  }, [audioBlob, user, roomId, recordingDuration, clearRecording, socket]);
-
-  const generateSummary = useCallback(async () => {
-    setIsSummarizing(true);
-    setShowSummaryModal(true);
-    try {
-      const summaryResult = await generateExecutiveChatSummary({
-        messages,
-        roomName
-      });
-      setSummary(summaryResult);
-    } catch (err) {
-      console.error('[ChatPanel] Failed to generate AI summary:', err);
-      setSummary("Unable to synthesize discussion at this time. Please check your network and try again.");
-    } finally {
-      setIsSummarizing(false);
-    }
-  }, [messages, roomName]);
+  }, [inputText, user, socket, isLoading, replyTarget, sendMessage, scrollToBottom, triggerAiStudyBuddyResponse, messages, roomId]);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
-    sendMessage();
-  }, [sendMessage]);
+    void handleSendMessage();
+  }, [handleSendMessage]);
+
+  const handleSendVoice = useCallback(async () => {
+    await executeVoiceSend(audioBlob, recordingDuration, clearRecording);
+  }, [executeVoiceSend, audioBlob, recordingDuration, clearRecording]);
 
   const audioBlobUrl = useMemo(() => {
     if (!audioBlob) return null;
-    const url = URL.createObjectURL(audioBlob);
-    return url;
+    return URL.createObjectURL(audioBlob);
   }, [audioBlob]);
 
+  useEffect(() => {
+    return () => {
+      if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+    };
+  }, [audioBlobUrl]);
+
+  // Group messages for neat conversational presentation
   const groupedMessages = useMemo(() => {
     return messages.map((msg, idx) => {
       const prevMsg = messages[idx - 1];
       const nextMsg = messages[idx + 1];
-      
-      const isFirstInGroup = !prevMsg || 
-        prevMsg.senderId !== msg.senderId || 
+
+      const isFirstInGroup =
+        !prevMsg ||
+        prevMsg.senderId !== msg.senderId ||
         differenceInMinutes(new Date(msg.createdAt), new Date(prevMsg.createdAt)) > 5;
-        
-      const isLastInGroup = !nextMsg || 
-        nextMsg.senderId !== msg.senderId || 
+
+      const isLastInGroup =
+        !nextMsg ||
+        nextMsg.senderId !== msg.senderId ||
         differenceInMinutes(new Date(nextMsg.createdAt), new Date(msg.createdAt)) > 5;
-        
+
       return { ...msg, isFirstInGroup, isLastInGroup };
     });
   }, [messages]);
 
-  const onEditMessage = useCallback((messageId, newText) => {
-    if (!socket || !newText.trim()) return;
-    
-    setMessages(prev =>
-      prev.map(m => (String(m.id) === messageId ? { ...m, text: newText.trim(), editedAt: new Date().toISOString() } : m))
-    );
-    socket.emit('chat:edit', { roomId, messageId, newText: newText.trim() });
-  }, [socket, roomId]);
-
-  const onDeleteMessage = useCallback((messageId) => {
-    if (!messageId) return;
-    
-    setMessages(prev => {
-      const next = prev.filter(m => String(m.id) !== String(messageId) && String(m.tempId || '') !== String(messageId));
-      try {
-        localStorage.setItem(`studix_chat_${roomId}`, JSON.stringify(next.slice(-80)));
-      } catch (_) {}
-      return next;
-    });
-
-    if (socket && socket.connected) {
-      socket.emit('chat:delete', { roomId, messageId });
-    }
-
-    deleteMessageApi(roomId, messageId).catch(err => {
-      console.warn('[ChatPanel] deleteMessageApi fallback notice:', err?.message);
-    });
-
-    toast.success('Message deleted');
-  }, [socket, roomId]);
-
-  const uploadRoomAvatar = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !isAdmin || !user) return;
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image must be under 5MB');
-      return;
-    }
-
-    setIsUploadingAvatar(true);
-    try {
-      const refPath = ref(storage, `rooms/${roomId}/room_avatar_${Date.now()}.jpg`);
-      await uploadBytes(refPath, file);
-      const url = await getDownloadURL(refPath);
-
-      await updateDoc(doc(db, "rooms", roomId), {
-        avatarUrl: url
-      });
-      toast.success('Room profile updated');
-    } catch (err) {
-      console.error('Avatar upload failed:', err);
-      toast.error('Failed to update room profile');
-    } finally {
-      setIsUploadingAvatar(false);
-    }
-  };
-
-  useEffect(() => {
-    return () => { if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl); };
-  }, [audioBlobUrl]);
-
   return (
-    <div className="flex flex-col h-full bg-[#09090b] relative overflow-hidden">
+    <div className={cn('flex flex-col h-full bg-[#09090b] relative overflow-hidden', className)}>
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
+
+      {/* Room Header */}
       <header className="shrink-0 flex items-center justify-between h-16 md:h-20 px-5 md:px-6 border-b border-[#27272a]/30 bg-[#09090b]/40 backdrop-blur-2xl z-20 gap-4">
         <div className="flex items-center gap-3 md:gap-4">
           <div className="flex items-center gap-2 md:gap-3 shrink-0">
@@ -698,7 +290,13 @@ export function ChatPanel({ roomId, roomData }) {
 
               {isAdmin && (
                 <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 flex items-center justify-center cursor-pointer transition-opacity z-10 backdrop-blur-[2px]">
-                  <input type="file" accept="image/*" className="hidden" onChange={uploadRoomAvatar} disabled={isUploadingAvatar} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => void executeAvatarUpload(e, isAdmin)}
+                    disabled={isUploadingAvatar}
+                  />
                   {isUploadingAvatar ? (
                     <Loader2 className="w-4 h-4 text-white animate-spin" />
                   ) : (
@@ -707,6 +305,7 @@ export function ChatPanel({ roomId, roomData }) {
                 </label>
               )}
             </div>
+
             <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2 md:gap-3">
               <h3 className="font-extrabold text-white text-sm md:text-base lg:text-lg tracking-tight whitespace-nowrap truncate max-w-[150px] md:max-w-[200px]">
                 {roomName || 'Study Room'}
@@ -734,7 +333,7 @@ export function ChatPanel({ roomId, roomData }) {
         </div>
       </header>
 
-
+      {/* Message List Area */}
       <div className="flex-1 relative overflow-hidden group/list min-h-0 z-10" data-radial-context="chat">
         <ScrollArea className="h-full w-full" ref={scrollRef}>
           <div className="px-5 py-8 max-w-5xl mx-auto min-h-full flex flex-col justify-end space-y-1">
@@ -782,6 +381,7 @@ export function ChatPanel({ roomId, roomData }) {
           </div>
         </ScrollArea>
 
+        {/* Floating Scroll to Bottom Button */}
         <AnimatePresence>
           {showScrollBottom && (
             <motion.button
@@ -796,13 +396,14 @@ export function ChatPanel({ roomId, roomData }) {
                 <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-indigo-600 animate-pulse" />
               </div>
               <span className="absolute right-full mr-4 px-3 py-1.5 rounded-xl bg-[#0E0F14] text-[11px] font-bold uppercase tracking-wider text-white opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 whitespace-nowrap shadow-2xl border border-white/10 origin-right">
-                New Messages ↓
+                New Messages &darr;
               </span>
             </motion.button>
           )}
         </AnimatePresence>
       </div>
 
+      {/* Reply Banner */}
       <AnimatePresence>
         {replyTarget && (
           <motion.div
@@ -823,7 +424,8 @@ export function ChatPanel({ roomId, roomData }) {
                   </p>
                 </div>
               </div>
-              <button 
+              <button
+                type="button"
                 onClick={() => setReplyTarget(null)}
                 className="p-1.5 rounded-full hover:bg-white/10 text-[#8E9297] hover:text-white transition-colors"
               >
@@ -834,114 +436,134 @@ export function ChatPanel({ roomId, roomData }) {
         )}
       </AnimatePresence>
 
+      {/* Message Input Bar */}
       <form onSubmit={handleSubmit} className="studix-input-bar w-full mx-auto shrink-0 group/form">
-          <div className="relative shrink-0">
-            <button
-              type="button"
-              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-              className={cn(
-                "studix-icon-btn studix-attach-btn",
-                showAttachmentMenu && "bg-white/10 text-white rotate-45"
-              )}
-              disabled={isUploading}
-            >
-              <Paperclip size={18} />
-            </button>
+        <div className="relative shrink-0">
+          <button
+            type="button"
+            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+            className={cn(
+              'studix-icon-btn studix-attach-btn',
+              showAttachmentMenu && 'bg-white/10 text-white rotate-45'
+            )}
+            disabled={isUploading}
+          >
+            <Paperclip size={18} />
+          </button>
 
-            <AnimatePresence>
-              {showAttachmentMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute bottom-full left-0 mb-4 bg-[#1A1D2B] text-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-[#2A2D3E] p-2 z-50 min-w-[160px] overflow-hidden"
-                >
-                  <label className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group">
-                    <Image className="h-4 w-4 text-indigo-400 group-hover:text-indigo-300" />
-                    <span className="text-sm font-semibold">Photos</span>
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'image')} disabled={isUploading} />
-                  </label>
-                  <label className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group">
-                    <FileText className="h-4 w-4 text-emerald-400 group-hover:text-emerald-300" />
-                    <span className="text-sm font-semibold">Document</span>
-                    <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && handleFileUpload(e.target.files[0], 'file')} disabled={isUploading} />
-                  </label>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          <AnimatePresence>
+            {showAttachmentMenu && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="absolute bottom-full left-0 mb-4 bg-[#1A1D2B] text-white rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] border border-[#2A2D3E] p-2 z-50 min-w-[160px] overflow-hidden"
+              >
+                <label className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group">
+                  <Image className="h-4 w-4 text-indigo-400 group-hover:text-indigo-300" />
+                  <span className="text-sm font-semibold">Photos</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && void handleFileUpload(e.target.files[0], 'image')}
+                    disabled={isUploading}
+                  />
+                </label>
+                <label className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 rounded-xl cursor-pointer transition-colors group">
+                  <FileText className="h-4 w-4 text-emerald-400 group-hover:text-emerald-300" />
+                  <span className="text-sm font-semibold">Document</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={(e) => e.target.files?.[0] && void handleFileUpload(e.target.files[0], 'file')}
+                    disabled={isUploading}
+                  />
+                </label>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-          <div className="studix-input-wrapper relative">
-            {isRecording && (
-              <div className="absolute inset-0 z-30 flex items-center justify-between bg-[#0E0F14] px-4 rounded-[24px] border border-red-500/30">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
-                  <span className="text-[12px] text-red-500 font-bold uppercase tracking-widest">Recording</span>
-                </div>
-                <span className="text-sm text-white font-mono font-bold">
-                  {Math.floor(recordingDuration / 60)}
-                </span>
-                <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <motion.div initial={{ width: 0 }} animate={{ width: '100%' }} transition={{ duration: 60, ease: "linear" }} className="h-full bg-red-500" />
-                </div>
+        <div className="studix-input-wrapper relative">
+          {isRecording && (
+            <div className="absolute inset-0 z-30 flex items-center justify-between bg-[#0E0F14] px-4 rounded-[24px] border border-red-500/30">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                <span className="text-[12px] text-red-500 font-bold uppercase tracking-widest">Recording</span>
               </div>
-            )}
-            <textarea
-              value={inputText}
-              onChange={(e) => {
-                handleInputChange(e);
-                e.target.style.height = 'auto';
-                e.target.style.height = (e.target.scrollHeight) + 'px';
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage();
-                  (e.target).style.height = 'auto';
-                }
-              }}
-              placeholder="Type a message..."
-              rows={1}
-              className="studix-input custom-scrollbar"
-              disabled={isLoading || isRecording || isUploading}
-            />
-          </div>
+              <span className="text-sm text-white font-mono font-bold">
+                {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+              </span>
+              <div className="w-20 h-1 bg-white/10 rounded-full overflow-hidden">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '100%' }}
+                  transition={{ duration: 60, ease: 'linear' }}
+                  className="h-full bg-red-500"
+                />
+              </div>
+            </div>
+          )}
 
-          <div className="studix-actions">
+          <textarea
+            value={inputText}
+            onChange={(e) => {
+              handleInputChange(e);
+              e.target.style.height = 'auto';
+              e.target.style.height = `${e.target.scrollHeight}px`;
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                void handleSendMessage();
+                e.target.style.height = 'auto';
+              }
+            }}
+            placeholder="Type a message..."
+            rows={1}
+            className="studix-input custom-scrollbar"
+            disabled={isLoading || isRecording || isUploading}
+          />
+        </div>
+
+        <div className="studix-actions">
+          <button
+            type="button"
+            onClick={isRecording ? stopRecording : startRecording}
+            className={cn(
+              'studix-icon-btn',
+              isRecording &&
+                'animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)] !bg-red-500/20 !text-red-500 !border-red-500/50'
+            )}
+            disabled={isUploading}
+          >
+            <Mic size={18} />
+          </button>
+
+          {audioBlob && !isRecording && (
             <button
               type="button"
-              onClick={isRecording ? stopRecording : startRecording}
-              className={cn(
-                "studix-icon-btn",
-                isRecording && "animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)] !bg-red-500/20 !text-red-500 !border-red-500/50"
-              )}
-              disabled={isUploading}
+              onClick={handleSendVoice}
+              className="studix-send-btn !w-auto px-4 !bg-emerald-500 hover:!bg-emerald-600 gap-2"
+              disabled={isLoading}
             >
-              <Mic size={18} />
+              <span className="text-[13px] font-bold">Voice</span>
+              <Send size={15} />
             </button>
+          )}
 
-            {audioBlob && !isRecording && (
-               <button
-                 type="button"
-                 onClick={sendVoiceMessage}
-                 className="studix-send-btn !w-auto px-4 !bg-emerald-500 hover:!bg-emerald-600 gap-2"
-                 disabled={isLoading}
-               >
-                 <span className="text-[13px] font-bold">Voice</span>
-                 <Send size={15} />
-               </button>
-            )}
-
-            <button
-              type="submit"
-              disabled={isLoading || !inputText.trim() || isRecording || isUploading}
-              className="studix-send-btn"
-            >
-              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={isLoading || !inputText.trim() || isRecording || isUploading}
+            className="studix-send-btn"
+          >
+            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+          </button>
+        </div>
       </form>
 
+      {/* AI Summary Modal */}
       <ChatSummaryModal
         open={showSummaryModal}
         onOpenChange={setShowSummaryModal}
@@ -949,7 +571,7 @@ export function ChatPanel({ roomId, roomData }) {
         isSummarizing={isSummarizing}
         onRegenerate={generateSummary}
         onPostToChat={(text) => {
-          sendMessage(text);
+          void handleSendMessage(text);
           setShowSummaryModal(false);
           toast.success('Shared executive summary to room chat');
         }}
@@ -960,3 +582,15 @@ export function ChatPanel({ roomId, roomData }) {
     </div>
   );
 }
+
+ChatPanel.propTypes = {
+  roomId: PropTypes.string.isRequired,
+  roomData: PropTypes.shape({
+    name: PropTypes.string,
+    avatarUrl: PropTypes.string,
+    adminIds: PropTypes.arrayOf(PropTypes.string),
+    creatorId: PropTypes.string,
+    createdBy: PropTypes.string,
+  }),
+  className: PropTypes.string,
+};
