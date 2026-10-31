@@ -28,6 +28,7 @@ import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { MessageItem } from './MessageItem';
 import { TypingIndicator } from './TypingIndicator';
 import { ChatSummaryModal } from './ChatSummaryModal';
+import { Tip } from '@/components/ui/tip';
 
 import { useChatMessages } from './hooks/useChatMessages';
 import { useChatUploads } from './hooks/useChatUploads';
@@ -334,15 +335,17 @@ export function ChatPanel({ roomId, roomData, className }) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={generateSummary}
-            className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-zinc-300 hover:text-white text-xs font-medium border border-white/10 gap-1.5 transition-colors"
-          >
-            <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-            AI Summary
-          </Button>
+          <Tip label="Synthesize discussion into executive summary" side="bottom">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={generateSummary}
+              className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-zinc-300 hover:text-white text-xs font-medium border border-white/10 gap-1.5 transition-colors"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+              AI Summary
+            </Button>
+          </Tip>
         </div>
       </header>
 
@@ -452,17 +455,19 @@ export function ChatPanel({ roomId, roomData, className }) {
       {/* Message Input Bar */}
       <form onSubmit={handleSubmit} className="studix-input-bar w-full mx-auto shrink-0 group/form">
         <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
-            className={cn(
-              'studix-icon-btn studix-attach-btn',
-              showAttachmentMenu && 'bg-white/10 text-white rotate-45'
-            )}
-            disabled={isUploading}
-          >
-            <Paperclip size={18} />
-          </button>
+          <Tip label="Add attachments (images or files)" side="top">
+            <button
+              type="button"
+              onClick={() => setShowAttachmentMenu(!showAttachmentMenu)}
+              className={cn(
+                'studix-icon-btn studix-attach-btn',
+                showAttachmentMenu && 'bg-white/10 text-white rotate-45'
+              )}
+              disabled={isUploading}
+            >
+              <Paperclip size={18} />
+            </button>
+          </Tip>
 
           <AnimatePresence>
             {showAttachmentMenu && (
@@ -541,38 +546,44 @@ export function ChatPanel({ roomId, roomData, className }) {
         </div>
 
         <div className="studix-actions">
-          <button
-            type="button"
-            onClick={isRecording ? stopRecording : startRecording}
-            className={cn(
-              'studix-icon-btn',
-              isRecording &&
-                'animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)] !bg-red-500/20 !text-red-500 !border-red-500/50'
-            )}
-            disabled={isUploading}
-          >
-            <Mic size={18} />
-          </button>
-
-          {audioBlob && !isRecording && (
+          <Tip label={isRecording ? "Stop recording voice note" : "Record voice note"} side="top">
             <button
               type="button"
-              onClick={handleSendVoice}
-              className="studix-send-btn !w-auto px-4 !bg-emerald-500 hover:!bg-emerald-600 gap-2"
-              disabled={isLoading}
+              onClick={isRecording ? stopRecording : startRecording}
+              className={cn(
+                'studix-icon-btn',
+                isRecording &&
+                  'animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.3)] !bg-red-500/20 !text-red-500 !border-red-500/50'
+              )}
+              disabled={isUploading}
             >
-              <span className="text-[13px] font-bold">Voice</span>
-              <Send size={15} />
+              <Mic size={18} />
             </button>
+          </Tip>
+
+          {audioBlob && !isRecording && (
+            <Tip label="Send recorded voice note" side="top">
+              <button
+                type="button"
+                onClick={handleSendVoice}
+                className="studix-send-btn !w-auto px-4 !bg-emerald-500 hover:!bg-emerald-600 gap-2"
+                disabled={isLoading}
+              >
+                <span className="text-[13px] font-bold">Voice</span>
+                <Send size={15} />
+              </button>
+            </Tip>
           )}
 
-          <button
-            type="submit"
-            disabled={isLoading || !inputText.trim() || isRecording || isUploading}
-            className="studix-send-btn"
-          >
-            {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-          </button>
+          <Tip label="Send message (Enter)" side="top">
+            <button
+              type="submit"
+              disabled={isLoading || !inputText.trim() || isRecording || isUploading}
+              className="studix-send-btn"
+            >
+              {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+            </button>
+          </Tip>
         </div>
       </form>
 
