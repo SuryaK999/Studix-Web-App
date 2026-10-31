@@ -9,7 +9,6 @@ import { JoinRoom } from '@/components/room/JoinRoom';
 import { RoomList } from '@/components/room/RoomList';
 import { useResizable } from '@/hooks/useResizable';
 import { ThemeTogglerButton } from '@/components/animate-ui/components/buttons/theme-toggler';
-import { useInvisibleScroll } from '@/hooks/useInvisibleScroll';
 import { Sparkles } from '@/components/ui/Sparkles';
 import {
   AlertDialog,
