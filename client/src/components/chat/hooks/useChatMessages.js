@@ -129,10 +129,20 @@ export function useChatMessages(roomId, user, socket) {
       setMessages(prev => prev.filter(m => String(m.id) !== tempId && m.tempId !== tempId));
     };
 
-    const handleReactionUpdate = ({ messageId, reactions, reactionUsers }) => {
+    const handleReactionUpdate = ({ messageId, tempId, reactions, reactionUsers }) => {
       if (!isMountedRef.current) return;
       setMessages(prev =>
-        prev.map(m => (String(m.id) === messageId ? { ...m, reactions, reactionUsers } : m))
+        prev.map(m => {
+          const idStr = String(m.id);
+          const tempStr = String(m.tempId || '');
+          const targetStr = String(messageId);
+          const tempTargetStr = tempId ? String(tempId) : '';
+          const isMatch =
+            idStr === targetStr ||
+            (tempStr && tempStr === targetStr) ||
+            (tempTargetStr && (idStr === tempTargetStr || tempStr === tempTargetStr));
+          return isMatch ? { ...m, reactions, reactionUsers } : m;
+        })
       );
     };
 
