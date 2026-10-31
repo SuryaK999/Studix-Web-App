@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
-import { useRoomPresence } from '@/hooks/usePresence';
+import { useUsersStore } from '@/store/usersStore';
 import { cn } from '@/lib/utils';
 
 import {
@@ -84,20 +85,30 @@ const EMOJI_CATEGORIES = [
 const DEBOUNCE_MS = 200;
 
 export const MessageReactions = memo(function MessageReactions({
-  messageId, roomId, reactions = {}, reactionUsers = {}, socket,
-  forcePickerOpen = false, onPickerClose, isOwn = false
+  messageId,
+  roomId,
+  reactions = {},
+  reactionUsers = {},
+  socket,
+  forcePickerOpen = false,
+  onPickerClose,
+  isOwn = false,
 }) {
+  const { user } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
   const [activeCategory, setActiveCategory] = useState(0);
+  const [pendingEmoji, setPendingEmoji] = useState(null);
 
-  // Sync picker with external trigger (hover smiley button)
-  const [prevForceOpen, setPrevForceOpen] = useState(forcePickerOpen);
-  if (forcePickerOpen !== prevForceOpen) {
-    setPrevForceOpen(forcePickerOpen);
-    if (forcePickerOpen && !showPicker) {
-      setShowPicker(true);
-    }
-  }
+  const pickerRef = useRef(null);
+  const debounceRef = useRef(null);
+  const pendingRef = useRef(false);
+
+  const isPickerOpen = showPicker || forcePickerOpen;
+
+  const closePicker = useCallback(() => {
+    setShowPicker(false);
+    onPickerClose?.();
+  }, [onPickerClose]);
 
   // Listen for radial menu trigger
   useEffect(() => {
@@ -105,45 +116,31 @@ export const MessageReactions = memo(function MessageReactions({
       if (e.detail?.open) setShowPicker(true);
     };
     window.addEventListener(`studix:react:${messageId}`, handler);
-    return () => window.removeEventListener(`studix:react:${messageId}`, handler);
+    return () => {
+      window.removeEventListener(`studix:react:${messageId}`, handler);
+    };
   }, [messageId]);
-
-  const [optimisticReactions, setOptimisticReactions] = useState(reactions);
-  const [optimisticReactionUsers, setOptimisticReactionUsers] = useState(reactionUsers);
-  const [prevReactions, setPrevReactions] = useState(reactions);
-  const [prevReactionUsers, setPrevReactionUsers] = useState(reactionUsers);
-
-  if (reactions !== prevReactions || reactionUsers !== prevReactionUsers) {
-    setPrevReactions(reactions);
-    setPrevReactionUsers(reactionUsers);
-    setOptimisticReactions(reactions);
-    setOptimisticReactionUsers(reactionUsers);
-  }
-
-  const { user } = useAuth();
-  const presence = useRoomPresence(roomId);
-  const pickerRef = useRef(null);
-  const debounceRef = useRef(null);
-  const pendingRef = useRef(false);
 
   // Listen for react errors to rollback
   useEffect(() => {
     if (!socket) return;
     const handleReactError = ({ messageId: errMsgId }) => {
       if (errMsgId === messageId) {
-        setOptimisticReactions(reactions);
+        setPendingEmoji(null);
       }
     };
     socket.on('chat:react_error', handleReactError);
-    return () => { socket.off('chat:react_error', handleReactError); };
-  }, [socket, messageId, reactions]);
+    return () => {
+      socket.off('chat:react_error', handleReactError);
+    };
+  }, [socket, messageId]);
 
   // Outside-click to close emoji picker
   useEffect(() => {
-    if (!showPicker) return;
+    if (!isPickerOpen) return;
     const handleClick = (e) => {
       if (pickerRef.current && !pickerRef.current.contains(e.target)) {
-        setShowPicker(false);
+        closePicker();
       }
     };
     const timeoutId = setTimeout(() => {
@@ -153,7 +150,26 @@ export const MessageReactions = memo(function MessageReactions({
       clearTimeout(timeoutId);
       document.removeEventListener('mousedown', handleClick);
     };
-  }, [showPicker]);
+  }, [isPickerOpen, closePicker]);
+
+  // Derive effective reactions with optimistic local toggle
+  const effectiveReactions = useMemo(() => {
+    if (!pendingEmoji || !user) return reactions;
+
+    const updated = {};
+    for (const [key, users] of Object.entries(reactions)) {
+      const filtered = users.filter(uid => uid !== user.uid);
+      if (filtered.length > 0) updated[key] = filtered;
+    }
+
+    const hadReaction = Boolean(reactions[pendingEmoji]?.includes(user.uid));
+    if (!hadReaction) {
+      if (!updated[pendingEmoji]) updated[pendingEmoji] = [];
+      updated[pendingEmoji] = [...updated[pendingEmoji], user.uid];
+    }
+
+    return updated;
+  }, [reactions, pendingEmoji, user]);
 
   // ── Single-reaction-per-user toggle (WhatsApp-style) ──
   const toggleReaction = useCallback((emoji) => {
@@ -161,56 +177,37 @@ export const MessageReactions = memo(function MessageReactions({
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     pendingRef.current = true;
-    debounceRef.current = setTimeout(() => { pendingRef.current = false; }, DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => {
+      pendingRef.current = false;
+    }, DEBOUNCE_MS);
 
-    let currentEmoji = null;
-    for (const [key, users] of Object.entries(optimisticReactions)) {
-      if (users.includes(user.uid)) {
-        currentEmoji = key;
-        break;
-      }
-    }
-
-    setOptimisticReactions(prev => {
-      const updated = {};
-      for (const [key, users] of Object.entries(prev)) {
-        const filtered = users.filter(uid => uid !== user.uid);
-        if (filtered.length > 0) updated[key] = filtered;
-      }
-
-      if (currentEmoji !== emoji) {
-        if (!updated[emoji]) updated[emoji] = [];
-        updated[emoji] = [...updated[emoji], user.uid];
-        setOptimisticReactionUsers(pu => ({ ...pu, [user.uid]: user.displayName || 'You' }));
-      } else {
-        setOptimisticReactionUsers(pu => {
-          const next = { ...pu };
-          delete next[user.uid];
-          return next;
-        });
-      }
-
-      return updated;
-    });
-
+    setPendingEmoji(emoji);
     socket.emit('chat:react', { roomId, messageId, emoji });
-    onPickerClose?.();
-    setShowPicker(false);
-  }, [user, socket, optimisticReactions, roomId, messageId, onPickerClose]);
+    closePicker();
+  }, [user, socket, roomId, messageId, closePicker]);
 
   const myReaction = user
-    ? Object.entries(optimisticReactions).find(([, users]) => users.includes(user.uid))?.[0] ?? null
+    ? Object.entries(effectiveReactions).find(([, users]) => users.includes(user.uid))?.[0] ?? null
     : null;
 
   const getReactorNames = useCallback((users) => {
-    if (!user) return '';
+    if (!user || !Array.isArray(users) || users.length === 0) return '';
+    const storeUsers = useUsersStore.getState().users;
+
     const names = users.map(uid => {
       if (uid === user.uid) return 'You';
-      return optimisticReactionUsers[uid] || presence[uid]?.displayName || 'Unknown User';
+      return (
+        reactionUsers[uid] ||
+        storeUsers[uid]?.displayName ||
+        storeUsers[uid]?.name ||
+        storeUsers[uid]?.username ||
+        'Unknown User'
+      );
     });
+
     if (names.length <= 3) return names.join(', ');
     return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
-  }, [user, presence, optimisticReactionUsers]);
+  }, [user, reactionUsers]);
 
   return (
     <div className="relative" ref={pickerRef}>
@@ -220,9 +217,9 @@ export const MessageReactions = memo(function MessageReactions({
         className="hidden" 
         aria-hidden="true" 
       />
-      <div className={cn("flex items-center gap-1 flex-wrap", isOwn ? "justify-end" : "justify-start")}>
+      <div className={cn('flex items-center gap-1 flex-wrap', isOwn ? 'justify-end' : 'justify-start')}>
         {/* ── Existing reaction badges (always visible) ── */}
-        {Object.entries(optimisticReactions).map(([emoji, users]) => {
+        {Object.entries(effectiveReactions).map(([emoji, users]) => {
           if (users.length === 0) return null;
           const hasReacted = user && users.includes(user.uid);
 
@@ -260,20 +257,19 @@ export const MessageReactions = memo(function MessageReactions({
             </Tooltip>
           );
         })}
-
       </div>
 
       {/* ── Full emoji picker (WhatsApp-style) ── */}
       <AnimatePresence>
-        {showPicker && (
+        {isPickerOpen && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 10 }}
             transition={{ type: 'spring', damping: 20, stiffness: 300 }}
             className={cn(
-              "absolute bottom-full mb-3 bg-[#0c0c14]/95 backdrop-blur-2xl border border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden",
-              isOwn ? "right-0" : "left-0"
+              'absolute bottom-full mb-3 bg-[#0c0c14]/95 backdrop-blur-2xl border border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden',
+              isOwn ? 'right-0' : 'left-0'
             )}
             style={{ width: 'min(300px, 85vw)', borderRadius: '24px' }}
           >
@@ -290,13 +286,12 @@ export const MessageReactions = memo(function MessageReactions({
                   }`}
                   title={cat.name}
                 >
-                  <span className={cn("transition-transform duration-200", activeCategory === idx && "scale-110")}>
+                  <span className={cn('transition-transform duration-200', activeCategory === idx && 'scale-110')}>
                     {cat.icon}
                   </span>
                 </button>
               ))}
             </div>
-
 
             <div className="px-2 pb-3 max-h-[220px] overflow-y-auto mt-2" style={{ scrollbarWidth: 'none' }}>
               <div className="grid grid-cols-7 gap-1">
@@ -307,8 +302,8 @@ export const MessageReactions = memo(function MessageReactions({
                     whileTap={{ scale: 0.8 }}
                     onClick={() => toggleReaction(emoji)}
                     className={cn(
-                      "w-10 h-10 flex items-center justify-center rounded-xl text-2xl transition-all duration-200",
-                      myReaction === emoji ? "bg-primary/10" : "bg-transparent"
+                      'w-10 h-10 flex items-center justify-center rounded-xl text-2xl transition-all duration-200',
+                      myReaction === emoji ? 'bg-primary/10' : 'bg-transparent'
                     )}
                   >
                     {emoji}
@@ -322,3 +317,14 @@ export const MessageReactions = memo(function MessageReactions({
     </div>
   );
 });
+
+MessageReactions.propTypes = {
+  messageId: PropTypes.string.isRequired,
+  roomId: PropTypes.string.isRequired,
+  reactions: PropTypes.oneOfType([PropTypes.object, PropTypes.array]),
+  reactionUsers: PropTypes.object,
+  socket: PropTypes.object,
+  forcePickerOpen: PropTypes.bool,
+  onPickerClose: PropTypes.func,
+  isOwn: PropTypes.bool,
+};
