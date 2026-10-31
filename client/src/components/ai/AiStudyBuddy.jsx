@@ -20,6 +20,7 @@ import {
   ArrowUp,
   Square
 } from 'lucide-react';
+import { StudyBuddyIcon, StudyBuddyAvatar } from '@/components/ui/StudyBuddyIcon';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/hooks/useSocket';
 import { db } from '@/lib/firebase/config';
@@ -631,35 +632,24 @@ export function AiStudyBuddy({ roomId }) {
       {/* Subtle modern radial glow */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_rgba(99,102,241,0.06)_0%,_transparent_65%)]" />
 
-      {/* ── 1. Modern 2026 Minimalist Top Bar ── */}
-      <header className="relative z-10 flex items-center justify-between h-14 px-4 md:px-6 shrink-0 border-b border-white/[0.08] bg-[#0c0d12]/90 backdrop-blur-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-200 shadow-sm shrink-0">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-          </div>
-          <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-zinc-100 text-sm tracking-tight whitespace-nowrap">
+      {/* ── 1. Modern Minimalist Top Bar ── */}
+      <header className="relative z-10 flex items-center justify-between min-h-[52px] h-auto py-2 px-3 sm:px-4 md:px-6 shrink-0 border-b border-white/[0.08] bg-[#0c0d12]/90 backdrop-blur-xl gap-2">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+          <StudyBuddyAvatar size="md" shape="squircle" glow />
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
+            <h2 className="font-semibold text-zinc-100 text-xs sm:text-sm tracking-tight truncate">
               StudyBuddy AI
             </h2>
-            {isGroqConfigured() ? (
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Groq Llama 3.3
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2 py-0.5 text-[9.5px] font-medium text-zinc-400 bg-white/[0.04] border border-white/10 rounded-full">
-                Offline Tutor
-              </span>
-            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {context && (
             <Tip label="Context aware of recent room discussions" side="bottom">
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[11px] text-zinc-400 max-w-[200px] truncate cursor-help">
-                <Sparkles className="w-3 h-3 text-purple-400 shrink-0" />
-                <span className="truncate">Room Context Active</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 text-[10.5px] sm:text-[11px] text-zinc-400 max-w-[130px] sm:max-w-[200px] truncate cursor-help">
+                <StudyBuddyIcon size={12} variant="gradient" className="shrink-0" />
+                <span className="hidden sm:inline truncate">Room Context Active</span>
+                <span className="sm:hidden text-[9px] font-medium text-purple-300">Context</span>
               </div>
             </Tip>
           )}
@@ -667,7 +657,7 @@ export function AiStudyBuddy({ roomId }) {
           <Tip label="Clear conversation history" side="bottom">
             <button
               onClick={handleClearChat}
-              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+              className="p-1.5 sm:p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-white/5 transition-colors shrink-0"
             >
               <Trash2 className="h-4 w-4" />
             </button>
@@ -677,37 +667,35 @@ export function AiStudyBuddy({ roomId }) {
 
       {/* ── 2. Message History & 2026 ChatGPT Canvas ── */}
       <ScrollArea className="flex-1 min-h-0 relative z-10 w-full" ref={scrollRef}>
-        <div className="p-4 md:p-6 max-w-3xl mx-auto flex flex-col justify-end min-h-full">
+        <div className="p-3 sm:p-4 md:p-6 max-w-3xl mx-auto flex flex-col justify-end min-h-full">
           {messages.length === 0 ? (
             /* Modern ChatGPT / Claude Empty State Hero */
-            <div className="flex-1 flex flex-col items-center justify-center min-h-[460px] text-center px-4 py-8">
+            <div className="flex-1 flex flex-col items-center justify-center min-h-[420px] sm:min-h-[460px] text-center px-3 sm:px-4 py-6 sm:py-8">
               <motion.div
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
-                className="flex flex-col items-center gap-4 max-w-xl w-full"
+                className="flex flex-col items-center gap-3 sm:gap-4 max-w-xl w-full"
               >
-                <div className="w-12 h-12 rounded-2xl bg-white/[0.04] border border-white/10 flex items-center justify-center text-zinc-200 shadow-xl">
-                  <Sparkles className="w-6 h-6 text-purple-400" />
-                </div>
+                <StudyBuddyAvatar size="xl" shape="squircle" glow />
 
                 <div className="space-y-1">
-                  <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-100">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-zinc-100">
                     How can I help you study today?
                   </h1>
-                  <p className="text-zinc-400 text-xs md:text-sm max-w-md mx-auto leading-relaxed">
+                  <p className="text-zinc-400 text-xs sm:text-sm max-w-md mx-auto leading-relaxed">
                     Ask any academic concept, debug code, or pick a starter accelerator below.
                   </p>
                 </div>
 
                 {/* 4 Clean Starter Accelerator Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full pt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5 w-full pt-3 sm:pt-4">
                   {STARTER_CARDS.map((card, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => sendMessage(card.prompt)}
-                      className="flex flex-col text-left p-3.5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.08] hover:border-purple-500/30 transition-all shadow-xs group cursor-pointer"
+                      className="flex flex-col text-left p-3 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.08] hover:border-purple-500/30 transition-all shadow-xs group cursor-pointer active:scale-[0.98]"
                     >
                       <div className="flex items-center gap-2 mb-1">
                         <div className="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/5 flex items-center justify-center shrink-0">
@@ -717,7 +705,7 @@ export function AiStudyBuddy({ roomId }) {
                           {card.title}
                         </span>
                       </div>
-                      <p className="text-[11.5px] text-zinc-400 line-clamp-2 leading-relaxed">
+                      <p className="text-[11px] sm:text-[11.5px] text-zinc-400 line-clamp-2 leading-relaxed">
                         {card.description}
                       </p>
                     </button>
@@ -731,20 +719,18 @@ export function AiStudyBuddy({ roomId }) {
               {messages.map((message, index) => (
                 <div key={message.id || `msg-${index}`} className="w-full">
                   {message.role === 'assistant' ? (
-                    <div className="flex gap-3 md:gap-4 items-start w-full group">
+                    <div className="flex gap-2.5 sm:gap-3.5 md:gap-4 items-start w-full group">
                       {/* Assistant Avatar */}
-                      <div className="w-8 h-8 rounded-full bg-[#161722] border border-white/10 flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                        <Sparkles className="h-4 w-4 text-purple-400" />
-                      </div>
+                      <StudyBuddyAvatar size="md" shape="circle" className="w-7 h-7 sm:w-8 sm:h-8 mt-0.5" />
 
                       {/* Content Canvas */}
                       <div className="flex-1 min-w-0">
-                        <div className="text-zinc-200 text-[14px] leading-relaxed overflow-hidden">
+                        <div className="text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words [overflow-wrap:anywhere] overflow-hidden">
                           <MarkdownRenderer content={message.content || message.text || ''} />
                         </div>
 
                         {/* Quiet modern action toolbar below message */}
-                        <div className="flex items-center gap-1 mt-2.5 pt-1 text-xs text-zinc-400">
+                        <div className="flex items-center gap-1 mt-2.5 pt-1 text-xs text-zinc-400 flex-wrap">
                           <Tip label="Copy response" side="bottom">
                             <button
                               onClick={() => handleCopy(message.content, message.id)}
@@ -777,12 +763,12 @@ export function AiStudyBuddy({ roomId }) {
 
                         {/* Follow-up accelerator chips (only on the latest assistant response) */}
                         {index === lastAssistantIndex && (
-                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06] flex-wrap">
-                            <span className="text-[11px] text-zinc-500 font-medium mr-1">Suggestions:</span>
+                          <div className="flex items-center gap-1.5 mt-3 pt-2.5 border-t border-white/[0.06] flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+                            <span className="text-[10.5px] sm:text-[11px] text-zinc-500 font-medium mr-0.5 shrink-0">Suggestions:</span>
                             <button
                               type="button"
                               onClick={() => sendMessage('Can you give a concrete, step-by-step code or practical example of this?')}
-                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
+                              className="text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                             >
                               <CodeIcon className="w-3 h-3 text-indigo-400" />
                               <span>Give code example</span>
@@ -790,7 +776,7 @@ export function AiStudyBuddy({ roomId }) {
                             <button
                               type="button"
                               onClick={() => sendMessage('Give me a practice problem or quick quiz based on what you just explained.')}
-                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
+                              className="text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                             >
                               <Brain className="w-3 h-3 text-emerald-400" />
                               <span>Practice problem</span>
@@ -798,9 +784,9 @@ export function AiStudyBuddy({ roomId }) {
                             <button
                               type="button"
                               onClick={() => sendMessage('Can you simplify this further in plain English as if I were a beginner?')}
-                              className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5"
+                              className="text-[10.5px] sm:text-[11px] font-medium px-2.5 py-1 rounded-full bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 text-zinc-300 hover:text-white transition-all active:scale-95 flex items-center gap-1.5 shrink-0"
                             >
-                              <Sparkles className="w-3 h-3 text-purple-400" />
+                              <StudyBuddyIcon size={12} variant="gradient" className="shrink-0" />
                               <span>Simplify this</span>
                             </button>
                           </div>
@@ -809,13 +795,13 @@ export function AiStudyBuddy({ roomId }) {
                     </div>
                   ) : (
                     /* User Message: Clean modern 2026 ChatGPT pill */
-                    <div className="flex gap-2.5 justify-end items-start w-full">
-                      <div className="bg-[#27272a] hover:bg-[#2c2c31] text-zinc-100 rounded-3xl px-4 py-2.5 shadow-sm max-w-[85%] md:max-w-[75%] border border-white/5 transition-colors">
-                        <p className="text-[14px] leading-relaxed whitespace-pre-wrap select-text">
+                    <div className="flex gap-2 sm:gap-2.5 justify-end items-start w-full">
+                      <div className="bg-[#27272a] hover:bg-[#2c2c31] text-zinc-100 rounded-2xl sm:rounded-3xl px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm max-w-[90%] sm:max-w-[80%] md:max-w-[75%] border border-white/5 transition-colors">
+                        <p className="text-[13.5px] sm:text-[14px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
                           {message.content}
                         </p>
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-semibold shadow-xs mt-0.5">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 text-xs font-semibold shadow-xs mt-0.5">
                         {user?.displayName?.[0] || 'U'}
                       </div>
                     </div>
@@ -823,19 +809,17 @@ export function AiStudyBuddy({ roomId }) {
                 </div>
               ))}
 
-              {/* 2026 ChatGPT-style Thinking Indicator */}
+              {/* Modern ChatGPT-style Thinking Indicator */}
               {isLoading && (
-                <div className="flex gap-3 md:gap-4 items-center">
-                  <div className="w-8 h-8 rounded-full bg-[#161722] border border-white/10 flex items-center justify-center shrink-0 shadow-xs">
-                    <Sparkles className="h-4 w-4 text-purple-400 animate-pulse" />
-                  </div>
+                <div className="flex gap-2.5 sm:gap-3.5 md:gap-4 items-center">
+                  <StudyBuddyAvatar size="md" shape="circle" pulse className="w-7 h-7 sm:w-8 sm:h-8" />
                   <div className="flex items-center gap-2 text-zinc-400 text-xs py-2 px-1">
                     <span className="flex gap-1 items-center">
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.3s]" />
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce [animation-delay:-0.15s]" />
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-bounce" />
                     </span>
-                    <span className="font-medium text-zinc-400">StudyBuddy is thinking...</span>
+                    <span className="font-medium text-zinc-400 text-[11.5px] sm:text-xs">StudyBuddy is thinking...</span>
                   </div>
                 </div>
               )}
@@ -859,7 +843,7 @@ export function AiStudyBuddy({ roomId }) {
       </ScrollArea>
 
       {/* ── 3. Quick Action Chips Docked Above Input (ONLY visible when NOT typing!) ── */}
-      <div className="shrink-0 px-4 md:px-6 pt-1 max-w-3xl mx-auto w-full relative z-10">
+      <div className="shrink-0 px-3 sm:px-4 md:px-6 pt-1 max-w-3xl mx-auto w-full relative z-10">
         <AnimatePresence>
           {!isTyping && (
             <motion.div
@@ -869,7 +853,7 @@ export function AiStudyBuddy({ roomId }) {
               transition={{ duration: 0.18, ease: 'easeOut' }}
               className="overflow-hidden"
             >
-              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5">
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-1 px-0.5 touch-pan-x">
                 {QUICK_ACTIONS.map((action, index) => (
                   <button
                     key={index}
@@ -878,7 +862,7 @@ export function AiStudyBuddy({ roomId }) {
                       sendMessage(action.prompt);
                     }}
                     disabled={isLoading}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 transition-all whitespace-nowrap disabled:opacity-50 flex-shrink-0 shadow-xs active:scale-95 group"
+                    className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-zinc-300 hover:text-white rounded-full bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-purple-500/30 transition-all whitespace-nowrap disabled:opacity-50 flex-shrink-0 shadow-xs active:scale-95 group"
                   >
                     <action.icon className="h-3.5 w-3.5 text-purple-400 group-hover:text-purple-300 transition-colors" />
                     <span>{action.label}</span>
@@ -890,14 +874,14 @@ export function AiStudyBuddy({ roomId }) {
         </AnimatePresence>
       </div>
 
-      {/* ── 4. 2026 Modern ChatGPT Input Capsule ── */}
-      <div className="shrink-0 p-4 md:p-6 pt-1 relative z-10 w-full max-w-3xl mx-auto">
+      {/* ── 4. Modern Input Capsule ── */}
+      <div className="shrink-0 p-3 sm:p-4 md:p-6 pt-1 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] relative z-10 w-full max-w-3xl mx-auto">
         <form
           onSubmit={(e) => {
             e.preventDefault();
             sendMessage();
           }}
-          className="relative flex flex-col bg-[#14151f]/90 backdrop-blur-2xl border border-white/10 focus-within:border-zinc-400/50 rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.6)] transition-all overflow-hidden p-2"
+          className="relative flex flex-col bg-[#14151f]/90 backdrop-blur-2xl border border-white/10 focus-within:border-purple-500/50 rounded-xl sm:rounded-2xl shadow-[0_10px_35px_rgba(0,0,0,0.6)] transition-all overflow-hidden p-1.5 sm:p-2"
         >
           <textarea
             ref={textareaRef}
@@ -915,18 +899,19 @@ export function AiStudyBuddy({ roomId }) {
               }
             }}
             placeholder="Ask StudyBuddy anything..."
-            className="w-full bg-transparent border-0 px-2 py-1 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar leading-relaxed"
+            className="w-full bg-transparent border-0 px-2 py-1 text-xs sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none resize-none max-h-36 custom-scrollbar leading-relaxed"
             disabled={isLoading}
           />
 
-          <div className="flex items-center justify-between pt-2 px-1">
-            <span className="text-[11px] text-zinc-500">
-              Enter ↵ to send • Shift+Enter for new line
+          <div className="flex items-center justify-between pt-1.5 sm:pt-2 px-1 gap-2">
+            <span className="text-[10px] sm:text-[11px] text-zinc-500 truncate">
+              <span className="hidden sm:inline">Enter ↵ to send • Shift+Enter for new line</span>
+              <span className="sm:hidden">StudyBuddy AI</span>
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               {input.length > 500 && (
-                <span className="text-[10px] text-zinc-500">{input.length}/{MAX_INPUT_LENGTH}</span>
+                <span className="text-[9.5px] sm:text-[10px] text-zinc-500">{input.length}/{MAX_INPUT_LENGTH}</span>
               )}
 
               {isLoading ? (
@@ -934,9 +919,9 @@ export function AiStudyBuddy({ roomId }) {
                   <button
                     type="button"
                     onClick={handleStopGeneration}
-                    className="w-8 h-8 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0 transition-colors"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center justify-center shrink-0 transition-colors"
                   >
-                    <Square className="w-3.5 h-3.5 fill-current" />
+                    <Square className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                   </button>
                 </Tip>
               ) : (
@@ -944,9 +929,9 @@ export function AiStudyBuddy({ roomId }) {
                   <button
                     type="submit"
                     disabled={!input.trim()}
-                    className="w-8 h-8 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 disabled:opacity-20 disabled:hover:bg-white shadow-sm transition-all active:scale-95"
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white hover:bg-zinc-200 text-zinc-950 flex items-center justify-center shrink-0 disabled:opacity-20 disabled:hover:bg-white shadow-sm transition-all active:scale-95"
                   >
-                    <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                    <ArrowUp className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                   </button>
                 </Tip>
               )}
@@ -954,7 +939,7 @@ export function AiStudyBuddy({ roomId }) {
           </div>
         </form>
 
-        <div className="text-center pt-2 text-[10.5px] text-zinc-500 select-none">
+        <div className="text-center pt-1.5 sm:pt-2 text-[10px] sm:text-[10.5px] text-zinc-500 select-none px-2">
           StudyBuddy can make mistakes. Verify important academic facts.
         </div>
       </div>
