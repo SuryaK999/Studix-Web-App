@@ -463,13 +463,27 @@ function StudyRoomContent({ roomId, onLeave }) {
                 <PanelLeft className="w-4 h-4" />
               </button>
             )}
-            <Hash className="w-5 h-5 text-[#4A4D57]" />
-            <h1 className="text-[14px] font-extrabold text-white leading-none tracking-tight">
-              {activeTab === 'chat' ? 'chat-channel' : activeTab === 'notes' ? 'notes' : activeTab === 'voice' ? 'voice' : 'ai-buddy'}
+            {activeTab === 'notes' ? (
+              <BookOpen className="w-4 h-4 text-purple-400" />
+            ) : activeTab === 'ai' ? (
+              <Sparkles className="w-4 h-4 text-purple-400" />
+            ) : activeTab === 'voice' ? (
+              <Mic className="w-4 h-4 text-emerald-400" />
+            ) : (
+              <Hash className="w-4 h-4 text-zinc-400" />
+            )}
+            <h1 className="text-[13.5px] font-bold text-white leading-none tracking-tight">
+              {activeTab === 'chat' ? 'chat-channel' : activeTab === 'notes' ? 'collaborative-notes' : activeTab === 'voice' ? 'voice-lounge' : 'studybuddy-ai'}
             </h1>
-            <div className="h-4 w-px bg-white/[0.06] mx-1" />
-            <p className="text-[12px] text-[#4A4D57] font-medium hidden md:block max-w-[300px] truncate">
-              {currentRoom?.description || 'Everything starts here.'}
+            <div className="h-4 w-px bg-white/[0.08] mx-1" />
+            <p className="text-[12px] text-zinc-400 font-medium hidden md:block max-w-[320px] truncate">
+              {activeTab === 'notes' 
+                ? 'Capture lecture notes, code snippets, and study takeaways' 
+                : activeTab === 'ai' 
+                  ? 'Ask any academic concept, debug code, or test retention' 
+                  : activeTab === 'voice' 
+                    ? 'Spatial audio voice lounge with proximity sound' 
+                    : (currentRoom?.description || 'Real-time collaborative study session')}
             </p>
           </div>
           
