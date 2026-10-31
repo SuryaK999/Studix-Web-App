@@ -46,7 +46,8 @@ class SupabaseStorageService {
 
     // Generate unique filename
     const timestamp = Date.now();
-    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const rawName = file.name || `audio_${timestamp}.webm`;
+    const sanitizedName = rawName.replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = options.roomId 
       ? `${options.roomId}/${timestamp}_${sanitizedName}`
       : `${options.folder || 'general'}/${timestamp}_${sanitizedName}`;
@@ -58,6 +59,7 @@ class SupabaseStorageService {
       .upload(fileName, fileToUpload, {
         cacheControl: '3600',
         upsert: false,
+        contentType: file.type || 'application/octet-stream',
       });
 
     if (error) {
@@ -72,7 +74,7 @@ class SupabaseStorageService {
 
     return {
       url: publicUrl,
-      fileName: file.name,
+      fileName: file.name || sanitizedName,
       fileSize: fileToUpload.size,
       mimeType: file.type,
     };
@@ -98,8 +100,16 @@ class SupabaseStorageService {
     }
 
     // Check file type
-    if (!STORAGE_SETTINGS.allowedFileTypes.includes(file.type)) {
-      throw new Error(`File type not allowed: ${file.type}`);
+    const type = file.type || '';
+    const cleanType = type.split(';')[0].trim();
+    const isAllowed = 
+      STORAGE_SETTINGS.allowedFileTypes.includes(type) ||
+      STORAGE_SETTINGS.allowedFileTypes.includes(cleanType) ||
+      type.startsWith('audio/') ||
+      type.startsWith('image/');
+
+    if (!isAllowed) {
+      throw new Error(`File type not allowed: ${type || 'unknown'}`);
     }
   }
 
@@ -224,8 +234,16 @@ class R2StorageService {
       throw new Error(`File too large. Max size: ${STORAGE_SETTINGS.maxFileSize / 1024 / 1024}MB`);
     }
 
-    if (!STORAGE_SETTINGS.allowedFileTypes.includes(file.type)) {
-      throw new Error(`File type not allowed: ${file.type}`);
+    const type = file.type || '';
+    const cleanType = type.split(';')[0].trim();
+    const isAllowed = 
+      STORAGE_SETTINGS.allowedFileTypes.includes(type) ||
+      STORAGE_SETTINGS.allowedFileTypes.includes(cleanType) ||
+      type.startsWith('audio/') ||
+      type.startsWith('image/');
+
+    if (!isAllowed) {
+      throw new Error(`File type not allowed: ${type || 'unknown'}`);
     }
   }
 
