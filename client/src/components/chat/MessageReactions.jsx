@@ -152,24 +152,47 @@ export const MessageReactions = memo(function MessageReactions({
     };
   }, [isPickerOpen, closePicker]);
 
+  // Defensively normalize reactions prop to always be a key -> string[] dictionary
+  const normalizedReactions = useMemo(() => {
+    if (!reactions || typeof reactions !== 'object') return {};
+
+    if (Array.isArray(reactions)) {
+      const map = {};
+      for (const item of reactions) {
+        if (item && item.emoji && Array.isArray(item.users)) {
+          map[item.emoji] = item.users;
+        }
+      }
+      return map;
+    }
+
+    const map = {};
+    for (const [key, users] of Object.entries(reactions)) {
+      if (Array.isArray(users)) {
+        map[key] = users;
+      }
+    }
+    return map;
+  }, [reactions]);
+
   // Derive effective reactions with optimistic local toggle
   const effectiveReactions = useMemo(() => {
-    if (!pendingEmoji || !user) return reactions;
+    if (!pendingEmoji || !user) return normalizedReactions;
 
     const updated = {};
-    for (const [key, users] of Object.entries(reactions)) {
+    for (const [key, users] of Object.entries(normalizedReactions)) {
       const filtered = users.filter(uid => uid !== user.uid);
       if (filtered.length > 0) updated[key] = filtered;
     }
 
-    const hadReaction = Boolean(reactions[pendingEmoji]?.includes(user.uid));
+    const hadReaction = Boolean(normalizedReactions[pendingEmoji]?.includes(user.uid));
     if (!hadReaction) {
       if (!updated[pendingEmoji]) updated[pendingEmoji] = [];
       updated[pendingEmoji] = [...updated[pendingEmoji], user.uid];
     }
 
     return updated;
-  }, [reactions, pendingEmoji, user]);
+  }, [normalizedReactions, pendingEmoji, user]);
 
   // ── Single-reaction-per-user toggle (WhatsApp-style) ──
   const toggleReaction = useCallback((emoji) => {
@@ -187,17 +210,17 @@ export const MessageReactions = memo(function MessageReactions({
   }, [user, socket, roomId, messageId, closePicker]);
 
   const myReaction = user
-    ? Object.entries(effectiveReactions).find(([, users]) => users.includes(user.uid))?.[0] ?? null
+    ? Object.entries(effectiveReactions).find(([, users]) => Array.isArray(users) && users.includes(user.uid))?.[0] ?? null
     : null;
 
   const getReactorNames = useCallback((users) => {
     if (!user || !Array.isArray(users) || users.length === 0) return '';
-    const storeUsers = useUsersStore.getState().users;
+    const storeUsers = useUsersStore.getState().users || {};
 
     const names = users.map(uid => {
       if (uid === user.uid) return 'You';
       return (
-        reactionUsers[uid] ||
+        reactionUsers?.[uid] ||
         storeUsers[uid]?.displayName ||
         storeUsers[uid]?.name ||
         storeUsers[uid]?.username ||
@@ -220,8 +243,8 @@ export const MessageReactions = memo(function MessageReactions({
       <div className={cn('flex items-center gap-1 flex-wrap', isOwn ? 'justify-end' : 'justify-start')}>
         {/* ── Existing reaction badges (always visible) ── */}
         {Object.entries(effectiveReactions).map(([emoji, users]) => {
-          if (users.length === 0) return null;
-          const hasReacted = user && users.includes(user.uid);
+          if (!Array.isArray(users) || users.length === 0) return null;
+          const hasReacted = Boolean(user && users.includes(user.uid));
 
           return (
             <Tooltip key={emoji}>
