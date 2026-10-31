@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useUsersStore } from '@/store/usersStore';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { Tip } from '@/components/ui/tip';
 
 export const MessageItem = memo(function MessageItem({
   message, isOwn, canDelete, isFirstInGroup, isLastInGroup, onEdit, onDelete, roomId, socket,
@@ -453,25 +454,25 @@ export const MessageItem = memo(function MessageItem({
                 {/* 1. Quick Reactions (Discord/Telegram style) */}
                 <div className="flex items-center gap-0.5">
                   {QUICK_EMOJIS.map((emoji, idx) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const targetId = message.id || message.tempId;
-                        if (socket && user && targetId) {
-                          socket.emit('chat:react', { roomId, messageId: targetId, emoji });
-                        }
-                        setShowActions(false);
-                      }}
-                      title={`React ${emoji}`}
-                      className={cn(
-                        "w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm rounded-full hover:scale-130 active:scale-95 hover:bg-white/10 transition-transform",
-                        idx >= 4 && "hidden sm:flex"
-                      )}
-                    >
-                      {emoji}
-                    </button>
+                    <Tip key={emoji} label={`React ${emoji}`} side="top">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const targetId = message.id || message.tempId;
+                          if (socket && user && targetId) {
+                            socket.emit('chat:react', { roomId, messageId: targetId, emoji });
+                          }
+                          setShowActions(false);
+                        }}
+                        className={cn(
+                          "w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm rounded-full hover:scale-130 active:scale-95 hover:bg-white/10 transition-transform",
+                          idx >= 4 && "hidden sm:flex"
+                        )}
+                      >
+                        {emoji}
+                      </button>
+                    </Tip>
                   ))}
                 </div>
 
@@ -490,20 +491,21 @@ export const MessageItem = memo(function MessageItem({
                     }}
                     align={isOwn ? 'right' : 'left'}
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowPicker((prev) => !prev);
-                      }}
-                      title="More reactions"
-                      className={cn(
-                        "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-purple-500/20 transition-all",
-                        showPicker && "text-purple-300 bg-purple-500/25 ring-1 ring-purple-400/50"
-                      )}
-                    >
-                      <SmilePlus size={13} />
-                    </button>
+                    <Tip label="More reactions" side="top">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowPicker((prev) => !prev);
+                        }}
+                        className={cn(
+                          "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-purple-500/20 transition-all",
+                          showPicker && "text-purple-300 bg-purple-500/25 ring-1 ring-purple-400/50"
+                        )}
+                      >
+                        <SmilePlus size={13} />
+                      </button>
+                    </Tip>
                   </EmojiPickerPopover>
                 </div>
 
@@ -514,83 +516,88 @@ export const MessageItem = memo(function MessageItem({
                   const raw = message.text.trim();
                   const isGreetingMsg = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(raw) || raw.length <= 4;
                   return (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
-                        toast.info(isGreetingMsg ? 'Asking StudyBuddy AI...' : 'Asking StudyBuddy AI to explain...');
-                        setShowActions(false);
-                      }}
-                      title={isGreetingMsg ? "Ask StudyBuddy AI" : "Explain with StudyBuddy AI"}
-                      className="h-5 md:h-6 px-2 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium"
-                    >
-                      <Sparkles size={11} className="text-purple-400" />
-                      <span className="hidden sm:inline">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
-                    </button>
+                    <Tip label={isGreetingMsg ? "Ask StudyBuddy AI" : "Explain with AI"} side="top">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
+                          toast.info(isGreetingMsg ? 'Asking StudyBuddy AI...' : 'Asking StudyBuddy AI to explain...');
+                          setShowActions(false);
+                        }}
+                        className="h-5 md:h-6 px-2 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium"
+                      >
+                        <Sparkles size={11} className="text-purple-400" />
+                        <span className="hidden sm:inline">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
+                      </button>
+                    </Tip>
                   );
                 })()}
 
                 {/* 4. Copy */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleCopy();
-                    setShowActions(false);
-                  }}
-                  title="Copy text"
-                  className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                >
-                  <Copy size={11} />
-                </button>
-
-                {/* 5. Reply */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('studix:action', {
-                      detail: { action: 'msg-reply', message }
-                    }));
-                    setShowActions(false);
-                  }}
-                  title="Reply"
-                  className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
-                >
-                  <Reply size={11} />
-                </button>
-
-                {/* 6. Edit */}
-                {isOwn && message.type === 'text' && (
+                <Tip label="Copy text" side="top">
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleEditStart();
+                      handleCopy();
                       setShowActions(false);
                     }}
-                    title="Edit message"
                     className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
                   >
-                    <Edit2 size={11} />
+                    <Copy size={11} />
                   </button>
+                </Tip>
+
+                {/* 5. Reply */}
+                <Tip label="Reply to message" side="top">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent('studix:action', {
+                        detail: { action: 'msg-reply', message }
+                      }));
+                      setShowActions(false);
+                    }}
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                  >
+                    <Reply size={11} />
+                  </button>
+                </Tip>
+
+                {/* 6. Edit */}
+                {isOwn && message.type === 'text' && (
+                  <Tip label="Edit message" side="top">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditStart();
+                        setShowActions(false);
+                      }}
+                      className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                    >
+                      <Edit2 size={11} />
+                    </button>
+                  </Tip>
                 )}
 
                 {/* 7. Delete */}
                 {(isOwn || canDelete) && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete();
-                      setShowActions(false);
-                    }}
-                    title="Delete message"
-                    className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500/20 transition-all"
-                  >
-                    <Trash2 size={11} />
-                  </button>
+                  <Tip label="Delete message" side="top">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete();
+                        setShowActions(false);
+                      }}
+                      className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500/20 transition-all"
+                    >
+                      <Trash2 size={11} />
+                    </button>
+                  </Tip>
                 )}
               </div>
             )}
@@ -600,7 +607,7 @@ export const MessageItem = memo(function MessageItem({
 
         <div className="mt-1">
           <MessageReactions 
-            messageId={message.id} 
+            messageId={message.id || message.tempId || ''} 
             roomId={roomId} 
             reactions={message.reactions}
             reactionUsers={message.reactionUsers}
