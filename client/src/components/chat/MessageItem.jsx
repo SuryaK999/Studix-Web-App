@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Copy, Edit2, Trash2, Reply, SmilePlus,
   Bot, Clock, CheckCircle2, AlertCircle, FileText, Download, Play, Pause, ExternalLink,
-  MessageSquare, Sparkles, Image as ImageIcon, X, Check
+  MessageSquare, Image as ImageIcon, X, Check
 } from 'lucide-react';
 import { cn, getServerUrl } from '@/lib/utils';
 
@@ -75,13 +75,10 @@ export const MessageItem = memo(function MessageItem({
 
   const renderFormattedMessageText = useCallback((text) => {
     if (!text || typeof text !== 'string') return null;
-    const mentionRegex = /(@ai\b|@studybuddy\b)/gi;
-    if (!mentionRegex.test(text)) {
-      return text;
-    }
-    const parts = text.split(mentionRegex);
+    const parts = text.split(/(@ai\b|@studybuddy\b|\/ai\b)/i);
+    if (parts.length === 1) return text;
     return parts.map((part, i) => {
-      if (/^@ai$/i.test(part) || /^@studybuddy$/i.test(part)) {
+      if (/^(@ai|@studybuddy|\/ai)$/i.test(part)) {
         return <StudyBuddyMentionBadge key={i} text={part} />;
       }
       return part;
@@ -359,12 +356,12 @@ export const MessageItem = memo(function MessageItem({
       <div className="w-9 h-9 flex-shrink-0 relative">
         {isFirstInGroup && !isOwn && (
           <Avatar className={cn(
-            "h-9 w-9 shadow-md shrink-0 animate-in zoom-in-50 duration-300",
-            isAi ? "border border-purple-500/50 shadow-purple-500/20" : "border border-white/[0.08]"
+            "h-9 w-9 shadow-sm shrink-0 animate-in zoom-in-50 duration-300",
+            isAi ? "border border-white/10 bg-[#161722]" : "border border-white/[0.08]"
           )}>
             {isAi ? (
-              <div className="w-full h-full bg-gradient-to-br from-[#1d1635] via-[#141524] to-[#0c0d15] flex items-center justify-center text-white">
-                <StudyBuddyIcon size={20} variant="gradient" />
+              <div className="w-full h-full bg-white/[0.04] flex items-center justify-center text-zinc-200">
+                <StudyBuddyIcon size={18} variant="gradient" />
               </div>
             ) : (
               <>
@@ -393,8 +390,8 @@ export const MessageItem = memo(function MessageItem({
               </span>
             )}
             {isAi && (
-              <span className="px-1.5 py-0.5 rounded bg-gradient-to-r from-purple-500/25 to-indigo-500/25 text-purple-300 text-[9px] font-black uppercase tracking-widest border border-purple-500/40 shrink-0 flex items-center gap-1 shadow-xs">
-                <StudyBuddyIcon size={10} variant="gradient" /> STUDYBUDDY AI
+              <span className="px-1.5 py-0.5 rounded bg-white/[0.04] text-purple-300 text-[9px] font-bold uppercase tracking-wider border border-white/10 shrink-0 flex items-center gap-1">
+                <StudyBuddyIcon size={10} variant="monochrome" /> StudyBuddy AI
               </span>
             )}
             {isAdmin && !isAi && (
@@ -496,6 +493,7 @@ export const MessageItem = memo(function MessageItem({
                 <div className="relative">
                   <EmojiPickerPopover
                     isOpen={showPicker}
+                    onOpenChange={setShowPicker}
                     onClose={() => setShowPicker(false)}
                     onSelect={(emoji) => {
                       const targetId = message.id || message.tempId;
@@ -507,21 +505,17 @@ export const MessageItem = memo(function MessageItem({
                     }}
                     align={isOwn ? 'right' : 'left'}
                   >
-                    <Tip label="More reactions" side="top">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowPicker((prev) => !prev);
-                        }}
-                        className={cn(
-                          "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-purple-500/20 transition-all",
-                          showPicker && "text-purple-300 bg-purple-500/25 ring-1 ring-purple-400/50"
-                        )}
-                      >
-                        <SmilePlus size={13} />
-                      </button>
-                    </Tip>
+                    <button
+                      type="button"
+                      title="More reactions"
+                      aria-label="More reactions"
+                      className={cn(
+                        "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-purple-500/20 transition-all cursor-pointer",
+                        showPicker && "text-purple-300 bg-purple-500/25 ring-1 ring-purple-400/50"
+                      )}
+                    >
+                      <SmilePlus size={13} />
+                    </button>
                   </EmojiPickerPopover>
                 </div>
 
@@ -541,10 +535,10 @@ export const MessageItem = memo(function MessageItem({
                           toast.info(isGreetingMsg ? 'Asking StudyBuddy AI...' : 'Asking StudyBuddy AI to explain...');
                           setShowActions(false);
                         }}
-                        className="h-5 md:h-6 px-2 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium"
+                        className="h-6 px-2 sm:px-2.5 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium shrink-0 active:scale-95"
                       >
                         <StudyBuddyIcon size={12} variant="gradient" />
-                        <span className="hidden sm:inline">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
+                        <span className="text-[10px] sm:text-[10.5px]">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
                       </button>
                     </Tip>
                   );
