@@ -140,6 +140,17 @@ function SpatialAvatar({
   );
 }
 
+function getStablePeerPosition(socketId = '') {
+  let hash = 0;
+  for (let i = 0; i < socketId.length; i++) {
+    hash = (hash << 5) - hash + socketId.charCodeAt(i);
+    hash |= 0;
+  }
+  const x = (((Math.abs(hash) % 1000) / 1000) * 0.6) + 0.2;
+  const y = (((Math.abs(hash >> 3) % 1000) / 1000) * 0.6) + 0.2;
+  return { x, y };
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 export function VoiceChat({ roomId }) {
   const { user } = useAuth();
@@ -159,8 +170,8 @@ export function VoiceChat({ roomId }) {
 
   const canvasRef    = useRef(null);
   const posThrottle  = useRef(0);
-  // Stable fallback positions: generated once per peer, never re-randomised on re-render
-  const defaultPositionsRef = useRef({});
+  const prevPeersRef = useRef(peers);
+
 
   // ── Emit my position (throttled 100ms) ──────────────────────────
   const broadcastPos = useCallback((x, y) => {
@@ -190,14 +201,16 @@ export function VoiceChat({ roomId }) {
     return () => { socket.off('voice:user-position', onPos); };
   }, [socket, spatial, myPos]);
 
-  // ── When a peer leaves, remove their position ──────────────────
+  // ── When a peer leaves, remove their audio node from spatial graph ──────────
   useEffect(() => {
-    const peerIds = new Set(peers.map(p => p.socketId));
-    setRemotePositions(p => {
-      const next = { ...p };
-      Object.keys(next).forEach(id => { if (!peerIds.has(id)) { spatial.removeUser(id); delete next[id]; } });
-      return next;
+    const prev = prevPeersRef.current;
+    const currentIds = new Set(peers.map(p => p.socketId));
+    prev.forEach(p => {
+      if (!currentIds.has(p.socketId)) {
+        spatial.removeUser(p.socketId);
+      }
     });
+    prevPeersRef.current = peers;
   }, [peers, spatial]);
 
   // ── Cleanup spatial audio on leave ─────────────────────────────
@@ -311,14 +324,7 @@ export function VoiceChat({ roomId }) {
           {/* Remote peers */}
           <AnimatePresence>
             {peers.map((peer) => {
-              // Use broadcasted position if available, else a stable random default (computed once)
-              if (!defaultPositionsRef.current[peer.socketId]) {
-                defaultPositionsRef.current[peer.socketId] = {
-                  x: Math.random() * 0.6 + 0.2,
-                  y: Math.random() * 0.6 + 0.2,
-                };
-              }
-              const pos = remotePositions[peer.socketId] ?? defaultPositionsRef.current[peer.socketId];
+              const pos = remotePositions[peer.socketId] ?? getStablePeerPosition(peer.socketId);
               return (
                 <motion.div key={peer.socketId} initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}>
                   <SpatialAvatar
