@@ -105,8 +105,9 @@ export function NotesEditor({ roomId, roomName }) {
     let cancelled = false;
 
     fetchNote(roomId)
-      .then(({ content }) => {
+      .then((data) => {
         if (cancelled || !editor) return;
+        const content = data?.content;
         if (content && editor.getHTML() !== content) {
           editor.commands.setContent(content, false);
         }
@@ -513,25 +514,27 @@ export function NotesEditor({ roomId, roomName }) {
           </span>
 
           {/* Comments Toggle Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowComments(!showComments)}
-            className={cn(
-              "h-8 px-2.5 rounded-lg text-xs font-semibold gap-1.5 transition-all border",
-              showComments
-                ? 'bg-purple-500/20 text-purple-200 border-purple-500/30'
-                : 'bg-white/[0.03] text-zinc-300 border-white/5 hover:text-white hover:bg-white/5'
-            )}
-          >
-            <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
-            <span>Comments</span>
-            {comments.filter(c => !c.resolved).length > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-purple-500 text-white text-[10px] font-bold">
-                {comments.filter(c => !c.resolved).length}
-              </span>
-            )}
-          </Button>
+          <Tip label="Toggle room comments panel" side="bottom">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowComments(!showComments)}
+              className={cn(
+                "h-8 px-2.5 rounded-lg text-xs font-semibold gap-1.5 transition-all border",
+                showComments
+                  ? 'bg-purple-500/20 text-purple-200 border-purple-500/30'
+                  : 'bg-white/[0.03] text-zinc-300 border-white/5 hover:text-white hover:bg-white/5'
+              )}
+            >
+              <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
+              <span>Comments</span>
+              {comments.filter(c => !c.resolved).length > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-purple-500 text-white text-[10px] font-bold">
+                  {comments.filter(c => !c.resolved).length}
+                </span>
+              )}
+            </Button>
+          </Tip>
 
           {/* Live Sync Badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.15)]">
