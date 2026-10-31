@@ -26,7 +26,7 @@ export function RoomList({ onSelectRoom }) {
     try {
       await navigator.clipboard.writeText(roomId);
       toast.success('Room ID copied to clipboard');
-    } catch (err) {
+    } catch {
       console.error('Clipboard failed');
     }
   };
