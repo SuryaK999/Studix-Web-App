@@ -16,10 +16,12 @@ export function usePresence(roomId) {
 
   useEffect(() => {
     if (!user || !roomId) return;
+    let cancelled = false;
 
     const startHeartbeat = async () => {
       try {
         const socket = await socketService.connect();
+        if (cancelled) return;
 
         // Immediate heartbeat on join
         socket.emit('presence:heartbeat');
@@ -35,10 +37,14 @@ export function usePresence(roomId) {
       }
     };
 
-    startHeartbeat();
+    void startHeartbeat();
 
     return () => {
-      if (heartbeatRef.current) clearInterval(heartbeatRef.current);
+      cancelled = true;
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
     };
   }, [user, roomId]);
 }
@@ -97,36 +103,50 @@ export function useRoomPresence(roomId) {
   useEffect(() => {
     if (!roomId) return;
 
+    let cancelled = false;
     let socket = null;
 
     // 1. Initial fetch of online users
     fetchRoomPresence(roomId)
       .then(users => {
+        if (cancelled) return;
         const initialPresence = {};
-        users.forEach(u => {
-          initialPresence[u.uid] = { 
-            userId: u.uid, 
-            displayName: u.displayName, 
-            username: u.username || null,
-            photoURL: u.photoURL, 
-            status: u.status || null,
-            isOnline: true 
-          };
-        });
+        if (Array.isArray(users)) {
+          users.forEach(u => {
+            if (u && u.uid) {
+              initialPresence[u.uid] = { 
+                userId: u.uid, 
+                displayName: u.displayName, 
+                username: u.username || null,
+                photoURL: u.photoURL, 
+                status: u.status || null,
+                isOnline: true 
+              };
+            }
+          });
+        }
         setPresence(initialPresence);
       })
-      .catch(err => logger.error('Failed to initial presence fetch', 'useRoomPresence', err));
+      .catch(err => {
+        if (!cancelled) {
+          logger.error('Failed to initial presence fetch', 'useRoomPresence', err);
+        }
+      });
 
     // 2. Listen for real-time updates
-    socketService.connect().then(s => {
-      socket = s;
-      socket.on('presence:joined', handleJoined);
-      socket.on('presence:left',   handleLeft);
-      socket.on('presence:status_update', handleStatusUpdate);
-      socket.on('presence:profile_sync', handleProfileSync);
-    }).catch(() => {});
+    socketService.connect()
+      .then(s => {
+        if (cancelled) return;
+        socket = s;
+        socket.on('presence:joined', handleJoined);
+        socket.on('presence:left',   handleLeft);
+        socket.on('presence:status_update', handleStatusUpdate);
+        socket.on('presence:profile_sync', handleProfileSync);
+      })
+      .catch(() => {});
 
     return () => {
+      cancelled = true;
       if (socket) {
         socket.off('presence:joined', handleJoined);
         socket.off('presence:left',   handleLeft);
