@@ -113,7 +113,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
           remarkPlugins={[remarkGfm]}
           components={{
           // Code & Syntax Highlighting
-          code({ node, inline, className: codeClass, children, ...props }) {
+          code({ _node, inline, className: codeClass, children, ...props }) {
             const match = /language-(\w+)/.exec(codeClass || '');
             const rawCode = String(children).replace(/\n$/, '');
 
@@ -137,17 +137,17 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
           },
 
           // Tables
-          table({ node, ...props }) {
+          table({ _node, ...props }) {
             return (
               <div className="overflow-x-auto my-3 rounded-xl border border-white/10 bg-black/40 shadow-inner custom-scrollbar">
                 <table className="w-full text-left text-xs border-collapse" {...props} />
               </div>
             );
           },
-          thead({ node, ...props }) {
+          thead({ _node, ...props }) {
             return <thead className="bg-white/[0.05] border-b border-white/10 text-zinc-200" {...props} />;
           },
-          th({ node, ...props }) {
+          th({ _node, ...props }) {
             return (
               <th
                 className="px-3.5 py-2.5 font-semibold text-zinc-200 tracking-wide uppercase text-[11px] whitespace-nowrap"
@@ -155,48 +155,48 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
               />
             );
           },
-          tbody({ node, ...props }) {
+          tbody({ _node, ...props }) {
             return <tbody className="divide-y divide-white/5" {...props} />;
           },
-          tr({ node, ...props }) {
+          tr({ _node, ...props }) {
             return <tr className="hover:bg-white/[0.02] transition-colors" {...props} />;
           },
-          td({ node, ...props }) {
+          td({ _node, ...props }) {
             return <td className="px-3.5 py-2 text-zinc-300 text-xs leading-relaxed align-top" {...props} />;
           },
 
           // Headings
-          h1({ node, ...props }) {
+          h1({ _node, ...props }) {
             return <h1 className="text-base md:text-lg font-bold text-zinc-100 mt-4 mb-2 flex items-center gap-2" {...props} />;
           },
-          h2({ node, ...props }) {
+          h2({ _node, ...props }) {
             return <h2 className="text-[15px] md:text-base font-semibold text-zinc-100 mt-3.5 mb-1.5 flex items-center gap-1.5" {...props} />;
           },
-          h3({ node, ...props }) {
+          h3({ _node, ...props }) {
             return <h3 className="text-[14px] md:text-[14.5px] font-medium text-zinc-200 mt-3 mb-1 flex items-center gap-1.5" {...props} />;
           },
-          h4({ node, ...props }) {
+          h4({ _node, ...props }) {
             return <h4 className="text-[13px] md:text-[13.5px] font-medium text-zinc-300 mt-2.5 mb-0.5" {...props} />;
           },
 
           // Paragraphs
-          p({ node, ...props }) {
+          p({ _node, ...props }) {
             return <p className="text-[13.5px] md:text-[14px] leading-relaxed my-2 last:mb-0 text-zinc-300" {...props} />;
           },
 
           // Lists
-          ul({ node, ...props }) {
+          ul({ _node, ...props }) {
             return <ul className="list-disc list-outside ml-4 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs md:text-[13.5px]" {...props} />;
           },
-          ol({ node, ...props }) {
+          ol({ _node, ...props }) {
             return <ol className="list-decimal list-outside ml-4 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs md:text-[13.5px]" {...props} />;
           },
-          li({ node, ...props }) {
+          li({ _node, ...props }) {
             return <li className="leading-relaxed" {...props} />;
           },
 
           // Blockquote
-          blockquote({ node, ...props }) {
+          blockquote({ _node, ...props }) {
             return (
               <blockquote
                 className="border-l-2 border-indigo-400 pl-3.5 py-1.5 my-3 bg-indigo-500/[0.06] rounded-r-lg text-zinc-300 italic text-xs md:text-sm"
@@ -206,12 +206,12 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
           },
 
           // Divider
-          hr({ node, ...props }) {
+          hr({ _node, ...props }) {
             return <hr className="border-t border-white/10 my-4" {...props} />;
           },
 
           // Links
-          a({ node, ...props }) {
+          a({ _node, ...props }) {
             return (
               <a
                 className="text-indigo-300 underline underline-offset-2 hover:text-indigo-200 transition-colors"
@@ -223,10 +223,10 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
           },
 
           // Emphasis
-          strong({ node, ...props }) {
+          strong({ _node, ...props }) {
             return <strong className="font-semibold text-zinc-100" {...props} />;
           },
-          em({ node, ...props }) {
+          em({ _node, ...props }) {
             return <em className="italic text-zinc-300" {...props} />;
           }
         }}
