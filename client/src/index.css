@@ -529,11 +529,19 @@ textarea:focus-visible {
 /* Studix AI Markdown Enhancements */
 .studix-markdown {
   word-break: break-word;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  max-width: 100%;
 }
 .studix-markdown table {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+}
+.studix-markdown th,
+.studix-markdown td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .studix-markdown th:first-child {
   border-top-left-radius: 8px;
@@ -549,6 +557,10 @@ textarea:focus-visible {
 }
 .studix-markdown p:empty {
   display: none;
+}
+.studix-markdown pre {
+  max-width: 100%;
+  min-width: 0;
 }
 
 /* Studix TipTap Collaborative Notes */
