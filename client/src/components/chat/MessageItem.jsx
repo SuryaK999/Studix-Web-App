@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, memo } from 'react';
+import { useState, useCallback, useRef, useEffect, memo, useMemo } from 'react';
 import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -42,6 +42,12 @@ export const MessageItem = memo(function MessageItem({
       editInputRef.current.setSelectionRange(len, len);
     }
   }, [isEditing]);
+
+  const formattedTime = useMemo(() => {
+    if (!message?.createdAt) return '';
+    const date = new Date(message.createdAt);
+    return isNaN(date.getTime()) ? '' : format(date, 'h:mm a');
+  }, [message.createdAt]);
 
   const isAdmin = (message).senderRole === 'admin' || message.senderName?.toLowerCase().includes('bot');
 
@@ -402,7 +408,7 @@ export const MessageItem = memo(function MessageItem({
                     "text-[9px] font-bold leading-none select-none tracking-tight",
                     isOwn ? "text-white/40" : "text-[#8E9297]"
                   )}>
-                    {format(new Date(message.createdAt), 'h:mm a')}
+                    {formattedTime}
                   </span>
                   {isOwn && (
                     <div className="flex items-center text-white/60 ml-0.5 scale-[0.75] origin-right">
