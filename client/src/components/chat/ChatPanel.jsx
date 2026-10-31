@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { StudyBuddyIcon } from '@/components/ui/StudyBuddyIcon';
 import { useAuth } from '@/context/AuthContext';
 import { usePresence } from '@/hooks/usePresence';
 import { useSocket } from '@/hooks/useSocket';
@@ -342,7 +343,7 @@ export function ChatPanel({ roomId, roomData, className }) {
               onClick={generateSummary}
               className="h-8 px-3 rounded-lg bg-white/[0.05] hover:bg-white/[0.09] text-zinc-300 hover:text-white text-xs font-medium border border-white/10 gap-1.5 transition-colors"
             >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
+              <StudyBuddyIcon size={14} variant="gradient" />
               AI Summary
             </Button>
           </Tip>
