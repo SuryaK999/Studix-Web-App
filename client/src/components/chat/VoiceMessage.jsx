@@ -21,12 +21,16 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
 
   const fullAudioUrl = getFullUrl(audioUrl);
 
-  useEffect(() => {
+  const [prevUrl, setPrevUrl] = useState(fullAudioUrl);
+  if (prevUrl !== fullAudioUrl) {
+    setPrevUrl(fullAudioUrl);
     setIsPlaying(false);
     setCurrentTime(0);
     setIsReady(false);
     setIsError(false);
-    
+  }
+
+  useEffect(() => {
     // Quick load check trick for Chrome caching WebM duration
     const testAudio = new Audio();
     testAudio.src = fullAudioUrl;
