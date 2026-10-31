@@ -474,7 +474,7 @@ class VoiceManager {
 
       this.isConnecting = false;
       if (this.onConnectingChange) this.onConnectingChange(false);
-    } catch (err) {
+    } catch {
       if (this.onErrorChange) this.onErrorChange('Microphone access denied.');
       this.isConnecting = false;
       if (this.onConnectingChange) this.onConnectingChange(false);
