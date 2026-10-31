@@ -31,24 +31,25 @@ export function MembersList({ roomId }) {
   const [loading, setLoading] = useState(true);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [customStatus, setCustomStatus] = useState(user?.status || '');
-  const [speakingUsers, setSpeakingUsers] = useState(new Set()); // userId set
-  const socketToUserRef = useRef({}); // socketId -> userId
-
-  useEffect(() => {
+  const [prevStatus, setPrevStatus] = useState(user?.status);
+  if (user?.status !== prevStatus) {
+    setPrevStatus(user?.status);
     if (user?.status) {
       setCustomStatus(user.status);
     }
-  }, [user?.status]);
+  }
 
-  // Stop skeleton after first presence update
+  const [speakingUsers, setSpeakingUsers] = useState(new Set()); // userId set
+  const socketToUserRef = useRef({}); // socketId -> userId
+
+  // Stop skeleton after first presence update or timeout
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (Object.keys(presence).length > 0) setLoading(false);
-  }, [presence]);
+  const hasPresence = Object.keys(presence).length > 0;
+  const isSkeleton = loading && !hasPresence;
 
   const getInitials = useCallback((name) =>
     (name || 'Anonymous').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2),
@@ -159,7 +160,7 @@ export function MembersList({ roomId }) {
       {/* Members List */}
       <ScrollArea className="flex-1 w-full -mr-4 pr-4 custom-scrollbar">
         <div className="space-y-1">
-          {loading ? (
+          {isSkeleton ? (
             <>
               <MemberSkeleton />
               <MemberSkeleton />
