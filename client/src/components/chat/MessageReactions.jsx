@@ -91,9 +91,13 @@ export const MessageReactions = memo(function MessageReactions({
   const [activeCategory, setActiveCategory] = useState(0);
 
   // Sync picker with external trigger (hover smiley button)
-  useEffect(() => {
-    if (forcePickerOpen && !showPicker) setShowPicker(true);
-  }, [forcePickerOpen]);
+  const [prevForceOpen, setPrevForceOpen] = useState(forcePickerOpen);
+  if (forcePickerOpen !== prevForceOpen) {
+    setPrevForceOpen(forcePickerOpen);
+    if (forcePickerOpen && !showPicker) {
+      setShowPicker(true);
+    }
+  }
 
   // Listen for radial menu trigger
   useEffect(() => {
@@ -106,17 +110,21 @@ export const MessageReactions = memo(function MessageReactions({
 
   const [optimisticReactions, setOptimisticReactions] = useState(reactions);
   const [optimisticReactionUsers, setOptimisticReactionUsers] = useState(reactionUsers);
+  const [prevReactions, setPrevReactions] = useState(reactions);
+  const [prevReactionUsers, setPrevReactionUsers] = useState(reactionUsers);
+
+  if (reactions !== prevReactions || reactionUsers !== prevReactionUsers) {
+    setPrevReactions(reactions);
+    setPrevReactionUsers(reactionUsers);
+    setOptimisticReactions(reactions);
+    setOptimisticReactionUsers(reactionUsers);
+  }
+
   const { user } = useAuth();
   const presence = useRoomPresence(roomId);
   const pickerRef = useRef(null);
   const debounceRef = useRef(null);
   const pendingRef = useRef(false);
-
-  // Sync optimistic state with server state
-  useEffect(() => {
-    setOptimisticReactions(reactions);
-    setOptimisticReactionUsers(reactionUsers);
-  }, [reactions, reactionUsers]);
 
   // Listen for react errors to rollback
   useEffect(() => {
