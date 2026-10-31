@@ -493,7 +493,7 @@ function StudyRoomContent({ roomId, onLeave }) {
             {activeTab === 'notes' ? (
               <BookOpen className="w-4 h-4 text-purple-400" />
             ) : activeTab === 'ai' ? (
-              <StudyBuddyIcon size={18} variant="gradient" className="shrink-0 drop-shadow-[0_0_10px_rgba(168,85,247,0.55)]" />
+              <StudyBuddyIcon size={16} variant="gradient" className="shrink-0" />
             ) : activeTab === 'voice' ? (
               <Mic className="w-4 h-4 text-emerald-400" />
             ) : (
