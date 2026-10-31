@@ -113,7 +113,7 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={togglePlay}
-        disabled={!isReady || isError}
+        disabled={isError}
         className={cn(
           "w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-white transition-colors shadow-sm",
           isError ? "bg-red-500/80 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20 shadow-lg",
