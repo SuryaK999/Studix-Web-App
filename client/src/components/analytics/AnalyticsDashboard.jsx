@@ -36,9 +36,25 @@ export function AnalyticsDashboard({ roomId }) {
   const [userActivity, setUserActivity] = useState([]);
   const [totalMessages, setTotalMessages] = useState(0);
   const [activeUsers, setActiveUsers] = useState(0);
-  const [errors, setErrors] = useState([]);
-  const [showErrors, setShowErrors] = useState(false);
   const { user } = useAuth();
+  const [showErrors, setShowErrors] = useState(false);
+  const [errors, setErrors] = useState(() => [
+    {
+      id: '1',
+      message: 'Failed to sync notes',
+      severity: 'medium',
+      timestamp: Date.now() - 3600000,
+      userId: user?.uid,
+      roomId,
+    },
+    {
+      id: '2',
+      message: 'Network timeout during file upload',
+      severity: 'low',
+      timestamp: Date.now() - 7200000,
+      roomId,
+    },
+  ]);
 
   // Fetch analytics data
   useEffect(() => {
@@ -51,7 +67,7 @@ export function AnalyticsDashboard({ roomId }) {
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       const messages = [];
       const userMap = new Map();
-      const hourlyMap = new Map<number, { messages; users: Set<string> }>();
+      const hourlyMap = new Map();
 
       snapshot.forEach((doc) => {
         const data = doc.data();
@@ -99,27 +115,7 @@ export function AnalyticsDashboard({ roomId }) {
     return () => unsubscribe();
   }, [roomId]);
 
-  // Mock errors for demo
-  useEffect(() => {
-    const mockErrors = [
-      {
-        id: '1',
-        message: 'Failed to sync notes',
-        severity: 'medium',
-        timestamp: Date.now() - 3600000,
-        userId: user?.uid,
-        roomId,
-      },
-      {
-        id: '2',
-        message: 'Network timeout during file upload',
-        severity: 'low',
-        timestamp: Date.now() - 7200000,
-        roomId,
-      },
-    ];
-    setErrors(mockErrors);
-  }, [roomId, user]);
+
 
   const getSeverityColor = (severity) => {
     switch (severity) {
