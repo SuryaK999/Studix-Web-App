@@ -15,7 +15,7 @@ export function getNetworkUrl(envUrl) {
           urlObj.hostname = hostname;
         }
         return urlObj.toString().replace(/\/$/, '');
-      } catch (e) {
+      } catch {
         return envUrl.replace(/\/$/, '');
       }
     }
