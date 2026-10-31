@@ -5,12 +5,15 @@ services:
   - type: web
     name: studix-backend
     runtime: node
+    plan: free
     rootDir: server
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /health
     autoDeploy: true
     envVars:
+      - key: NODE_VERSION
+        value: "20"
       - key: NODE_ENV
         value: production
       - key: PORT
@@ -34,6 +37,7 @@ services:
   - type: web
     name: studix-frontend
     runtime: static
+    plan: free
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
@@ -43,6 +47,8 @@ services:
         source: /*
         destination: /index.html
     envVars:
+      - key: NODE_VERSION
+        value: "20"
       - key: VITE_API_URL
         sync: false
       - key: VITE_SOCKET_URL
