@@ -136,65 +136,35 @@ export function StudyBuddyIcon({
         </linearGradient>
       </defs>
 
-      {/* Ambient Radial Aura for 'glow' variant */}
-      {variant === 'glow' && (
-        <circle cx="12" cy="12" r="10.5" fill={`url(#${gradGlow})`} />
-      )}
-
-      {/* Layer 1: 45° Faceted Intelligence Wings (Claude / Gemini multi-lobe harmonic depth) */}
+      {/* Primary Layer: 4-pointed Curved Precision Intelligence Nexus */}
       <path
-        d="M12 4.2C12.6 7.8 15.8 11 19.5 11.6C15.8 12.2 12.6 15.4 12 19C11.4 15.4 8.2 12.2 4.5 11.6C8.2 11 11.4 7.8 12 4.2Z"
-        fill={`url(#${gradSecondary})`}
-        fillOpacity="0.58"
-        transform="rotate(45 12 12)"
-      />
-
-      {/* Layer 2: Primary 4-pointed Precision Intelligence Nexus (Gemini / Claude sleek geometry) */}
-      <path
-        d="M12 1.8C12.7 7 16.8 11.1 22 11.8C16.8 12.5 12.7 16.6 12 21.8C11.3 16.6 7.2 12.5 2 11.8C7.2 11.1 11.3 7 12 1.8Z"
+        d="M12 2C12.7 7 16.8 11.1 22 11.8C16.8 12.5 12.7 16.6 12 21.8C11.3 16.6 7.2 12.5 2 11.8C7.2 11.1 11.3 7 12 2Z"
         fill={`url(#${gradPrimary})`}
       />
 
-      {/* Layer 3: Glass Prism Facet Refraction Highlight */}
+      {/* Subtle Inner Highlight */}
       <path
-        d="M12 6.2C12.4 8.8 14.8 11.1 17.5 11.6C14.8 12.1 12.4 14.4 12 17C11.6 14.4 9.2 12.1 6.5 11.6C9.2 11.1 11.6 8.8 12 6.2Z"
+        d="M12 6.5C12.4 8.8 14.8 11.1 17.5 11.6C14.8 12.1 12.4 14.4 12 17C11.6 14.4 9.2 12.1 6.5 11.6C9.2 11.1 11.6 8.8 12 6.5Z"
         fill="#FFFFFF"
-        fillOpacity="0.24"
+        fillOpacity="0.2"
       />
 
-      {/* Layer 4: Continuous Neural Orbital Ring (Copilot / OpenAI ribbon loop aesthetic) */}
-      <ellipse
-        cx="12"
-        cy="11.8"
-        rx="7.5"
-        ry="2.8"
-        transform="rotate(-28 12 11.8)"
-        stroke={`url(#${gradOrbit})`}
-        strokeWidth="1.1"
-        strokeDasharray="2.5 1.5"
-        strokeOpacity="0.7"
-      />
+      {/* Brilliant Neural Core Node */}
+      <circle cx="12" cy="11.8" r="2" fill={`url(#${gradCore})`} />
+      <circle cx="12" cy="11.8" r="0.8" fill="#FFFFFF" />
 
-      {/* Layer 5: Brilliant Neural Core Node */}
-      <circle cx="12" cy="11.8" r="2.2" fill={`url(#${gradCore})`} />
-      <circle cx="12" cy="11.8" r="0.9" fill="#FFFFFF" />
-
-      {/* Layer 6: Satellite Intelligence Spark (Top Right) */}
+      {/* Satellite Intelligence Spark (Top Right) */}
       <path
         d="M19.8 2.2C20 3.2 20.7 3.9 21.8 4.1C20.7 4.3 20 5 19.8 6C19.6 5 18.9 4.3 17.8 4.1C18.9 3.9 19.6 3.2 19.8 2.2Z"
         fill={`url(#${gradSatellite})`}
       />
-
-      {/* Layer 7: Micro Energy Spark (Bottom Left) */}
-      <circle cx="4.2" cy="19.2" r="1" fill="#38BDF8" fillOpacity="0.8" />
     </svg>
   );
 }
 
 /**
  * StudyBuddyAvatar
- * Modern squircle / circular glassmorphic avatar with ambient aura,
- * inner glass reflection, and Studix's signature violet gradient.
+ * Sleek, modern, polished studio avatar without aggressive glowing halos.
  */
 export function StudyBuddyAvatar({
   size = 'md', // 'xs' (20px) | 'sm' (24px) | 'md' (32px) | 'lg' (40px) | 'xl' (48px)
@@ -220,17 +190,15 @@ export function StudyBuddyAvatar({
         "relative flex items-center justify-center shrink-0 select-none overflow-hidden",
         config.container,
         config.rounded,
-        "bg-gradient-to-br from-[#1e1438] via-[#141525] to-[#0c0d15]",
-        "border border-purple-500/35",
-        "shadow-[0_2px_12px_rgba(113,72,235,0.22)]",
-        glow && "shadow-[0_0_22px_rgba(168,85,247,0.36)] ring-1 ring-purple-400/40",
+        "bg-[#151621] border border-white/10",
+        "shadow-xs",
+        glow && "border-purple-500/30 ring-1 ring-purple-500/20",
         pulse && "animate-pulse",
         className
       )}
       {...props}
     >
-      {/* Top glass reflection highlight */}
-      <div className="absolute inset-0 bg-gradient-to-b from-white/[0.14] via-transparent to-transparent pointer-events-none rounded-[inherit]" />
+      <div className="absolute inset-0 bg-white/[0.04] pointer-events-none rounded-[inherit]" />
       <StudyBuddyIcon size={config.icon} variant="gradient" />
     </div>
   );
