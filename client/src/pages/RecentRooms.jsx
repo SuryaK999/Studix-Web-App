@@ -4,12 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, Users, ArrowRight } from 'lucide-react';
 
 export default function RecentRooms() {
-  const [rooms, setRooms] = useState([]);
+  const [rooms] = useState(() => getRecentRooms());
   const navigate = useNavigate();
-
-  useEffect(() => {
-    setRooms(getRecentRooms());
-  }, []);
 
   return (
     <div className="flex-1 w-full bg-background p-8 overflow-y-auto">
