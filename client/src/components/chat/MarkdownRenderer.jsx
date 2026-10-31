@@ -48,17 +48,17 @@ const CodeBlock = memo(function CodeBlock({ language, code }) {
   }, [code]);
 
   return (
-    <div className="relative my-3 rounded-xl overflow-hidden border border-white/10 bg-[#0c0d12] shadow-md group">
+    <div className="w-full max-w-full min-w-0 relative my-3 rounded-xl overflow-hidden border border-white/10 bg-[#0c0d12] shadow-md group">
       {/* Code Header Bar */}
-      <div className="flex items-center justify-between px-3.5 py-1.5 bg-white/[0.04] border-b border-white/[0.08] text-xs">
-        <div className="flex items-center gap-1.5 text-zinc-300 font-mono text-[11px] font-medium tracking-wider uppercase">
-          <Terminal className="w-3.5 h-3.5 text-zinc-400" />
-          <span>{language || 'code'}</span>
+      <div className="flex items-center justify-between px-3 sm:px-3.5 py-1.5 bg-white/[0.04] border-b border-white/[0.08] text-xs">
+        <div className="flex items-center gap-1.5 text-zinc-300 font-mono text-[10.5px] sm:text-[11px] font-medium tracking-wider uppercase truncate">
+          <Terminal className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+          <span className="truncate">{language || 'code'}</span>
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-medium text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors"
+          className="flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-medium text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 transition-colors shrink-0"
           title="Copy code"
         >
           {copied ? (
@@ -76,8 +76,8 @@ const CodeBlock = memo(function CodeBlock({ language, code }) {
       </div>
 
       {/* Code Body */}
-      <pre className="p-3.5 overflow-x-auto text-xs font-mono text-zinc-200 leading-relaxed custom-scrollbar m-0">
-        <code>{code}</code>
+      <pre className="p-3 sm:p-3.5 w-full max-w-full min-w-0 overflow-x-auto text-[11.5px] sm:text-xs font-mono text-zinc-200 leading-relaxed custom-scrollbar m-0 touch-pan-x">
+        <code className="block min-w-0 whitespace-pre">{code}</code>
       </pre>
     </div>
   );
@@ -173,13 +173,13 @@ function HeadingNode({ level, children, className, ...props }) {
   };
 
   return (
-    <Comp className={cn(sizeClasses[level], 'flex items-center gap-2 group tracking-tight', className)} {...props}>
+    <Comp className={cn(sizeClasses[level], 'flex items-center gap-2 group tracking-tight flex-wrap min-w-0 max-w-full break-words [overflow-wrap:anywhere]', className)} {...props}>
       {icon && (
         <span className={cn('w-6 h-6 rounded-md flex items-center justify-center shrink-0 border shadow-xs', badgeClass)}>
           {icon}
         </span>
       )}
-      <span>{icon ? cleanText : children}</span>
+      <span className="min-w-0 break-words [overflow-wrap:anywhere]">{icon ? cleanText : children}</span>
     </Comp>
   );
 }
@@ -197,7 +197,7 @@ class MarkdownErrorBoundary extends React.Component {
   }
   render() {
     if (this.state.hasError) {
-      return <p className="whitespace-pre-wrap text-white/90 text-sm leading-relaxed">{this.props.fallback}</p>;
+      return <p className="whitespace-pre-wrap text-white/90 text-sm leading-relaxed break-words [overflow-wrap:anywhere]">{this.props.fallback}</p>;
     }
     return this.props.children;
   }
@@ -223,7 +223,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
   if (!sanitizedContent) return null;
 
   return (
-    <div className={`studix-markdown leading-relaxed ${className}`}>
+    <div className={`studix-markdown leading-relaxed w-full max-w-full min-w-0 ${className}`}>
       <MarkdownErrorBoundary fallback={sanitizedContent}>
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
@@ -239,7 +239,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
 
               return (
                 <code
-                  className="px-1.5 py-0.5 rounded bg-white/[0.08] border border-white/[0.08] text-indigo-300 font-mono text-[12px] break-words"
+                  className="px-1.5 py-0.5 rounded bg-white/[0.08] border border-white/[0.08] text-indigo-300 font-mono text-[11.5px] sm:text-[12px] break-words [overflow-wrap:anywhere]"
                   {...props}
                 >
                   {children}
@@ -255,8 +255,8 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
             // Tables
             table({ _node, ...props }) {
               return (
-                <div className="overflow-x-auto my-3 rounded-xl border border-white/10 bg-black/40 shadow-inner custom-scrollbar">
-                  <table className="w-full text-left text-xs border-collapse" {...props} />
+                <div className="w-full max-w-full min-w-0 overflow-x-auto my-3 rounded-xl border border-white/10 bg-black/40 shadow-inner custom-scrollbar touch-pan-x">
+                  <table className="w-full min-w-[280px] sm:min-w-[340px] text-left text-xs border-collapse table-auto" {...props} />
                 </div>
               );
             },
@@ -266,7 +266,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
             th({ _node, ...props }) {
               return (
                 <th
-                  className="px-3.5 py-2.5 font-semibold text-zinc-200 tracking-wide uppercase text-[11px] whitespace-nowrap"
+                  className="px-3 sm:px-3.5 py-2 sm:py-2.5 font-semibold text-zinc-200 tracking-wide uppercase text-[10.5px] sm:text-[11px] break-words [overflow-wrap:anywhere]"
                   {...props}
                 />
               );
@@ -278,7 +278,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
               return <tr className="hover:bg-white/[0.02] transition-colors" {...props} />;
             },
             td({ _node, ...props }) {
-              return <td className="px-3.5 py-2 text-zinc-300 text-xs leading-relaxed align-top" {...props} />;
+              return <td className="px-3 sm:px-3.5 py-2 text-zinc-300 text-xs leading-relaxed align-top break-words [overflow-wrap:anywhere]" {...props} />;
             },
 
             // Headings with polished design system badges
@@ -297,25 +297,25 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
 
             // Paragraphs
             p({ _node, ...props }) {
-              return <p className="text-[13.5px] md:text-[14px] leading-relaxed my-2 last:mb-0 text-zinc-300" {...props} />;
+              return <p className="text-[13px] sm:text-[13.5px] md:text-[14px] leading-relaxed my-2 last:mb-0 text-zinc-300 break-words [overflow-wrap:anywhere] min-w-0" {...props} />;
             },
 
             // Lists
             ul({ _node, ...props }) {
-              return <ul className="list-disc list-outside ml-4 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs md:text-[13.5px]" {...props} />;
+              return <ul className="list-disc list-outside ml-4 sm:ml-5 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs sm:text-[13px] md:text-[13.5px] max-w-full min-w-0 break-words [overflow-wrap:anywhere]" {...props} />;
             },
             ol({ _node, ...props }) {
-              return <ol className="list-decimal list-outside ml-4 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs md:text-[13.5px]" {...props} />;
+              return <ol className="list-decimal list-outside ml-4 sm:ml-5 my-2.5 space-y-1.5 text-zinc-300 marker:text-indigo-400 text-xs sm:text-[13px] md:text-[13.5px] max-w-full min-w-0 break-words [overflow-wrap:anywhere]" {...props} />;
             },
             li({ _node, ...props }) {
-              return <li className="leading-relaxed" {...props} />;
+              return <li className="leading-relaxed break-words [overflow-wrap:anywhere] min-w-0" {...props} />;
             },
 
             // Blockquote
             blockquote({ _node, ...props }) {
               return (
                 <blockquote
-                  className="border-l-2 border-indigo-400 pl-3.5 py-1.5 my-3 bg-indigo-500/[0.06] rounded-r-lg text-zinc-300 italic text-xs md:text-sm"
+                  className="border-l-2 border-indigo-400 pl-3.5 py-1.5 my-3 bg-indigo-500/[0.06] rounded-r-lg text-zinc-300 italic text-xs md:text-sm break-words [overflow-wrap:anywhere] min-w-0 max-w-full"
                   {...props}
                 />
               );
@@ -330,7 +330,7 @@ export const MarkdownRenderer = memo(function MarkdownRenderer({ content, classN
             a({ _node, ...props }) {
               return (
                 <a
-                  className="text-indigo-300 underline underline-offset-2 hover:text-indigo-200 transition-colors"
+                  className="text-indigo-300 underline underline-offset-2 hover:text-indigo-200 transition-colors break-words [overflow-wrap:anywhere]"
                   target="_blank"
                   rel="noopener noreferrer"
                   {...props}
