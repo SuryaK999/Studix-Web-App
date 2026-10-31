@@ -39,29 +39,31 @@ function mergeProps(childProps, slotProps) {
   return merged;
 }
 
+const motionComponentCache = new Map();
+
+function getMotionComponent(type) {
+  if (typeof type === 'object' && type !== null && isMotionComponent(type)) {
+    return type;
+  }
+  let comp = motionComponentCache.get(type);
+  if (!comp) {
+    comp = motion.create(type);
+    motionComponentCache.set(type, comp);
+  }
+  return comp;
+}
+
 function Slot({ children, ref, ...props }) {
-  const isAlreadyMotion =
-    typeof children.type === 'object' &&
-    children.type !== null &&
-    isMotionComponent(children.type);
-
-  const Base = React.useMemo(
-    () =>
-      isAlreadyMotion
-        ? (children.type)
-        : motion.create(children.type),
-    [isAlreadyMotion, children.type],
-  );
-
   if (!React.isValidElement(children)) return null;
 
+  const Base = getMotionComponent(children.type);
   const { ref: childRef, ...childProps } = children.props;
-
   const mergedProps = mergeProps(childProps, props);
 
-  return (
-    <Base {...mergedProps} ref={mergeRefs(childRef, ref)} />
-  );
+  return React.createElement(Base, {
+    ...mergedProps,
+    ref: mergeRefs(childRef, ref),
+  });
 }
 
 export { Slot };
