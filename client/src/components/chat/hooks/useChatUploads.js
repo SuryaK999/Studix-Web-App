@@ -51,15 +51,20 @@ export function useChatUploads(roomId, user, socket, setMessages) {
     setShowAttachmentMenu(false);
 
     const attemptUpload = async (retryCount) => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30_000);
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error('Upload timed out after 30 seconds'));
+        }, 30_000);
+      });
 
       try {
-        const result = await storageService.uploadFile(file, {
+        const uploadPromise = storageService.uploadFile(file, {
           roomId,
           folder: type === 'image' ? 'images' : 'files',
           compress: type === 'image',
         });
+        const result = await Promise.race([uploadPromise, timeoutPromise]);
         clearTimeout(timeoutId);
         return result;
       } catch (err) {
@@ -125,9 +130,11 @@ export function useChatUploads(roomId, user, socket, setMessages) {
           duration: recordingDuration,
         },
         fileUrl:        url,
+        voiceUrl:       url,
         fileName:       `voice-${id}.webm`,
         fileSize:       audioBlob.size,
         fileDuration:   recordingDuration,
+        voiceDuration:  recordingDuration,
         senderId:       user.uid,
         senderName:     user.displayName || 'Anonymous',
         senderPhotoURL: user.photoURL,
