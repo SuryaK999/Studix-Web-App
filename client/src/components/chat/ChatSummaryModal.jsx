@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ export function ChatSummaryModal({
   messageCount = 0,
 }) {
   const [copied, setCopied] = useState(false);
-  const groqActive = useMemo(() => isGroqConfigured(), [open]);
+  const groqActive = isGroqConfigured();
 
   // Copy full summary markdown to clipboard
   const handleCopyFull = useCallback(async () => {
