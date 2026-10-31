@@ -9,11 +9,12 @@ import {
 } from 'lucide-react';
 import { cn, getServerUrl } from '@/lib/utils';
 
-import { MessageReactions } from './MessageReactions';
+import { MessageReactions, EmojiPickerPopover, QUICK_EMOJIS } from './MessageReactions';
 import { VoiceMessage } from './VoiceMessage';
 import { getVoiceUrl } from '@/services/voiceStorageService';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
 import { useUsersStore } from '@/store/usersStore';
 import { MarkdownRenderer } from './MarkdownRenderer';
 
@@ -28,7 +29,9 @@ export const MessageItem = memo(function MessageItem({
   const photoURL = realUser?.photoURL || realUser?.avatarUrl || message.senderPhotoURL || undefined;
   const uniqueId = isAi ? 'studybuddy' : (realUser?.username || realUser?.uniqueId || message.senderUsername || null);
 
+  const { user } = useAuth();
   const [showActions, setShowActions] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text || '');
@@ -152,7 +155,7 @@ export const MessageItem = memo(function MessageItem({
         }));
       }
       if (action === 'msg-react') {
-        window.dispatchEvent(new CustomEvent(`studix:react:${message.id}`, { detail: { open: true } }));
+        setShowPicker(true);
       }
     };
 
@@ -163,6 +166,20 @@ export const MessageItem = memo(function MessageItem({
       el.removeEventListener('studix-action', handler);
     };
   }, [handleCopy, handleEditStart, handleDelete, message]);
+
+  // Mobile/touch: dismiss floating action bar when tapping outside
+  useEffect(() => {
+    if (!showActions || showPicker) return;
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setShowActions(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideClick);
+    };
+  }, [showActions, showPicker]);
 
   const renderContent = () => {
     const fullFileUrl = getFullUrl(message.fileUrl);
@@ -318,7 +335,9 @@ export const MessageItem = memo(function MessageItem({
       data-message-can-delete={(canDelete || isOwn) ? '1' : '0'}
       data-radial-text={message.text || (message.type === 'voice' ? 'Voice Message' : message.fileName ? `File: ${message.fileName}` : '')}
       onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseLeave={() => {
+        if (!showPicker) setShowActions(false);
+      }}
     >
       <div className="w-9 h-9 flex-shrink-0 relative">
         {isFirstInGroup && !isOwn && (
@@ -371,8 +390,9 @@ export const MessageItem = memo(function MessageItem({
 
         <div className={cn("flex items-end gap-2", isOwn ? "flex-row-reverse" : "flex-row")}>
           <div
+            onClick={() => setShowActions(prev => !prev)}
             className={cn(
-              "px-4 py-2.5 rounded-2xl relative shadow-sm border transition-all duration-300",
+              "px-4 py-2.5 rounded-2xl relative shadow-sm border transition-all duration-300 cursor-pointer md:cursor-auto",
               isOwn
                 ? 'bg-gradient-to-br from-primary to-purple-600 text-white border-white/10 shadow-[0_4px_16px_rgba(113,72,235,0.15)]'
                 : isAi
@@ -422,11 +442,74 @@ export const MessageItem = memo(function MessageItem({
 
             </div>
 
-            {!isEditing && showActions && (
-              <div className={cn(
-                "absolute top-[-10px] flex items-center gap-1.5 z-30",
-                isOwn ? "left-[-10px]" : "right-[-10px]"
-              )}>
+            {!isEditing && (showActions || showPicker) && (
+              <div
+                className={cn(
+                  "absolute -top-3.5 flex items-center gap-1 z-30 bg-[#0c0d15]/95 backdrop-blur-2xl border border-purple-500/30 rounded-full px-2 py-0.5 shadow-[0_10px_30px_rgba(0,0,0,0.65)] select-none max-w-[calc(100vw-32px)]",
+                  isOwn ? "right-2" : "left-2"
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* 1. Quick Reactions (Discord/Telegram style) */}
+                <div className="flex items-center gap-0.5">
+                  {QUICK_EMOJIS.map((emoji, idx) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const targetId = message.id || message.tempId;
+                        if (socket && user && targetId) {
+                          socket.emit('chat:react', { roomId, messageId: targetId, emoji });
+                        }
+                        setShowActions(false);
+                      }}
+                      title={`React ${emoji}`}
+                      className={cn(
+                        "w-5 h-5 md:w-6 md:h-6 flex items-center justify-center text-xs md:text-sm rounded-full hover:scale-130 active:scale-95 hover:bg-white/10 transition-transform",
+                        idx >= 4 && "hidden sm:flex"
+                      )}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 2. More Reactions (SmilePlus / +) with anchored popover */}
+                <div className="relative">
+                  <EmojiPickerPopover
+                    isOpen={showPicker}
+                    onClose={() => setShowPicker(false)}
+                    onSelect={(emoji) => {
+                      const targetId = message.id || message.tempId;
+                      if (socket && user && targetId) {
+                        socket.emit('chat:react', { roomId, messageId: targetId, emoji });
+                      }
+                      setShowPicker(false);
+                      setShowActions(false);
+                    }}
+                    align={isOwn ? 'right' : 'left'}
+                  >
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowPicker((prev) => !prev);
+                      }}
+                      title="More reactions"
+                      className={cn(
+                        "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-purple-500/20 transition-all",
+                        showPicker && "text-purple-300 bg-purple-500/25 ring-1 ring-purple-400/50"
+                      )}
+                    >
+                      <SmilePlus size={13} />
+                    </button>
+                  </EmojiPickerPopover>
+                </div>
+
+                <div className="w-px h-3.5 bg-white/10 mx-0.5" />
+
+                {/* 3. Explain / Ask AI */}
                 {!isAi && message.text && !message.text.trim().startsWith('@ai') && !message.text.trim().startsWith('/ai') && (() => {
                   const raw = message.text.trim();
                   const isGreetingMsg = /^(hi+|hello+|hey+|yo+|sup|howdy|good\s*(morning|afternoon|evening)|what'?s\s*up)\b/i.test(raw) || raw.length <= 4;
@@ -437,52 +520,76 @@ export const MessageItem = memo(function MessageItem({
                         e.stopPropagation();
                         window.dispatchEvent(new CustomEvent('studix:ai-explain', { detail: { message } }));
                         toast.info(isGreetingMsg ? 'Asking StudyBuddy AI...' : 'Asking StudyBuddy AI to explain...');
+                        setShowActions(false);
                       }}
                       title={isGreetingMsg ? "Ask StudyBuddy AI" : "Explain with StudyBuddy AI"}
-                      className="h-6 px-2.5 rounded-full bg-zinc-900/95 border border-white/10 flex items-center gap-1 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all shadow-md text-[11px] font-medium"
+                      className="h-5 md:h-6 px-2 rounded-full bg-purple-500/15 border border-purple-500/30 flex items-center gap-1 text-purple-200 hover:text-white hover:bg-purple-500/25 transition-all text-[10.5px] font-medium"
                     >
-                      <Sparkles size={11} className="text-indigo-400" />
-                      <span>{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
+                      <Sparkles size={11} className="text-purple-400" />
+                      <span className="hidden sm:inline">{isGreetingMsg ? 'Ask AI' : 'Explain'}</span>
                     </button>
                   );
                 })()}
-                {isAi && message.text && (
+
+                {/* 4. Copy */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopy();
+                    setShowActions(false);
+                  }}
+                  title="Copy text"
+                  className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <Copy size={11} />
+                </button>
+
+                {/* 5. Reply */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('studix:action', {
+                      detail: { action: 'msg-reply', message }
+                    }));
+                    setShowActions(false);
+                  }}
+                  title="Reply"
+                  className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
+                >
+                  <Reply size={11} />
+                </button>
+
+                {/* 6. Edit */}
+                {isOwn && message.type === 'text' && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleCopy();
+                      handleEditStart();
+                      setShowActions(false);
                     }}
-                    title="Copy AI response"
-                    className="h-6 px-2.5 rounded-full bg-zinc-900/95 border border-white/10 flex items-center gap-1 text-zinc-300 hover:text-white hover:bg-zinc-800 transition-all shadow-md text-[11px] font-medium"
+                    title="Edit message"
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 transition-all"
                   >
-                    <Copy size={11} className="text-zinc-400" />
-                    <span>Copy</span>
+                    <Edit2 size={11} />
                   </button>
                 )}
-                <button
-                  data-reaction-trigger="1"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const reactionArea = containerRef.current?.querySelector('[data-reaction-area]');
-                    (reactionArea)?.click();
-                  }}
-                  title="Add reaction"
-                  className="w-6 h-6 rounded-full bg-[#1e1f2b] border border-white/10 flex items-center justify-center text-[#8e9297] hover:text-white hover:bg-primary/20 hover:border-primary/30 transition-all duration-200 shadow-xl"
-                >
-                  <SmilePlus size={14} />
-                </button>
+
+                {/* 7. Delete */}
                 {(isOwn || canDelete) && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDelete();
+                      setShowActions(false);
                     }}
                     title="Delete message"
-                    className="w-6 h-6 rounded-full bg-[#1e1f2b] border border-red-500/30 flex items-center justify-center text-red-400 hover:text-white hover:bg-red-600/60 hover:border-red-500/60 transition-all duration-200 shadow-xl"
+                    className="w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center text-red-400 hover:text-white hover:bg-red-500/20 transition-all"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={11} />
                   </button>
                 )}
               </div>
