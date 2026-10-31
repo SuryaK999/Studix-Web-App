@@ -87,7 +87,27 @@ export function ChatPanel({ roomId, roomData, className }) {
     scrollRef,
     showScrollBottom,
     scrollToBottom,
-  } = useChatScroll(messages);
+  } = useChatScroll(messages, loadingOlder);
+
+  const triggerAiRef = useRef(null);
+
+  // Stable programmatic message dispatch (used by input bar, AI explain, and summary sharing)
+  const handleSendProgrammaticMessage = useCallback((text, reply = null) => {
+    const trimmed = (text || '').trim();
+    if (!trimmed || !user || !socket) return;
+
+    const result = sendMessage(trimmed, reply);
+    setTimeout(() => scrollToBottom('smooth'), 100);
+
+    if (result && triggerAiRef.current) {
+      triggerAiRef.current(
+        trimmed,
+        [...messages, result.payload],
+        result.tempId,
+        user.displayName || 'Anonymous'
+      );
+    }
+  }, [user, socket, sendMessage, scrollToBottom, messages]);
 
   // SRP Hook 3: AI interactions & Executive summary
   const {
@@ -103,9 +123,13 @@ export function ChatPanel({ roomId, roomData, className }) {
     messages,
     setMessages,
     socket,
-    sendMessage: (text) => sendMessage(text, null),
+    sendMessage: handleSendProgrammaticMessage,
     scrollToBottom,
   });
+
+  useEffect(() => {
+    triggerAiRef.current = triggerAiStudyBuddyResponse;
+  }, [triggerAiStudyBuddyResponse]);
 
   // SRP Hook 4: File, Voice, and Avatar uploads
   const {
@@ -218,20 +242,9 @@ export function ChatPanel({ roomId, roomData, className }) {
     const currentReply = replyTarget;
     setReplyTarget(null);
 
-    const result = sendMessage(trimmed, currentReply);
+    handleSendProgrammaticMessage(trimmed, currentReply);
     setIsLoading(false);
-
-    setTimeout(() => scrollToBottom('smooth'), 100);
-
-    if (result) {
-      triggerAiStudyBuddyResponse(
-        trimmed,
-        [...messages, result.payload],
-        result.tempId,
-        user.displayName || 'Anonymous'
-      );
-    }
-  }, [inputText, user, socket, isLoading, replyTarget, sendMessage, scrollToBottom, triggerAiStudyBuddyResponse, messages, roomId]);
+  }, [inputText, user, socket, isLoading, replyTarget, handleSendProgrammaticMessage, roomId]);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
