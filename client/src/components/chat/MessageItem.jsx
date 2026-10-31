@@ -215,14 +215,14 @@ export const MessageItem = memo(function MessageItem({
               onLoad={() => setImageLoaded(true)}
             />
           </div>
-          {message.text && <p className="text-sm pr-12">{message.text}</p>}
+          {message.text && <p className="text-sm pr-12 break-words [overflow-wrap:anywhere]">{message.text}</p>}
         </div>
       );
     }
 
     if (message.type === 'file' && fullFileUrl) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full min-w-0">
           <a
             href={fullFileUrl}
             target="_blank"
@@ -239,7 +239,7 @@ export const MessageItem = memo(function MessageItem({
             <Download className="h-4 w-4 text-muted-foreground flex-shrink-0" />
           </a>
           {message.text && message.text !== `Shared ${message.fileName?.split('.').pop() || 'file'}` && (
-            <p className="text-sm pr-12">{message.text}</p>
+            <p className="text-sm pr-12 break-words [overflow-wrap:anywhere]">{message.text}</p>
           )}
         </div>
       );
@@ -248,13 +248,13 @@ export const MessageItem = memo(function MessageItem({
     const audioSrc = message.type === 'voice' ? getVoiceUrl(message) || getFullUrl(message.fileUrl) : null;
     if (message.type === 'voice' && audioSrc) {
       return (
-        <div className="space-y-2">
+        <div className="space-y-2 w-full max-w-full min-w-0">
           <VoiceMessage
             key={audioSrc}
             audioUrl={audioSrc}
             duration={message.voiceDuration || message.voice?.duration || message.fileDuration || 0}
           />
-          {message.text && message.text !== 'Voice message' && <p className="text-sm pr-12">{message.text}</p>}
+          {message.text && message.text !== 'Voice message' && <p className="text-sm pr-12 break-words [overflow-wrap:anywhere]">{message.text}</p>}
         </div>
       );
     }
@@ -319,13 +319,13 @@ export const MessageItem = memo(function MessageItem({
           </div>
         )}
 
-        <div className="relative">
+        <div className="relative w-full max-w-full min-w-0">
           {isAi ? (
-            <div className="text-[13.5px] md:text-[14px] leading-relaxed pr-6 pb-2 min-w-[260px] overflow-hidden">
+            <div className="text-[13px] sm:text-[13.5px] md:text-[14px] leading-relaxed pb-2 w-full max-w-full min-w-0 break-words [overflow-wrap:anywhere]">
               <MarkdownRenderer content={message.text} />
             </div>
           ) : (
-            <p className="text-[14.2px] leading-relaxed pr-14 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderFormattedMessageText(message.text)}</p>
+            <p className="text-[13.5px] sm:text-[14.2px] leading-relaxed pr-12 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{renderFormattedMessageText(message.text)}</p>
           )}
           {message.editedAt && (
             <span className="text-[9px] text-white/30 italic ml-1 select-none">(edited)</span>
@@ -342,7 +342,7 @@ export const MessageItem = memo(function MessageItem({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "flex gap-2.5 px-2 relative group focus:outline-none",
+        "flex gap-2 sm:gap-2.5 px-1.5 sm:px-2 relative group focus:outline-none w-full max-w-full min-w-0",
         isOwn ? 'flex-row-reverse' : 'flex-row',
         isFirstInGroup ? 'mt-4' : 'mt-1',
         isLastInGroup && "mb-2"
@@ -357,10 +357,10 @@ export const MessageItem = memo(function MessageItem({
         if (!showPicker) setShowActions(false);
       }}
     >
-      <div className="w-9 h-9 flex-shrink-0 relative">
+      <div className="w-8 h-8 sm:w-9 sm:h-9 flex-shrink-0 relative">
         {isFirstInGroup && !isOwn && (
           <Avatar className={cn(
-            "h-9 w-9 shadow-sm shrink-0 animate-in zoom-in-50 duration-300",
+            "h-8 w-8 sm:h-9 sm:w-9 shadow-sm shrink-0 animate-in zoom-in-50 duration-300",
             isAi ? "border border-white/10 bg-[#161722]" : "border border-white/[0.08]"
           )}>
             {isAi ? (
@@ -379,9 +379,18 @@ export const MessageItem = memo(function MessageItem({
         )}
       </div>
 
-      <div className={cn("flex flex-col", isAi ? "max-w-[96%] md:max-w-[85%]" : (isOwn ? "max-w-[85%] md:max-w-[70%]" : "max-w-[85%] md:max-w-[70%]"), isOwn ? "items-end" : "items-start")}>
+      <div className={cn(
+        "flex flex-col min-w-0",
+        isAi
+          ? "w-full max-w-full"
+          : (isOwn
+              ? "max-w-[88%] sm:max-w-[80%] md:max-w-[70%]"
+              : "max-w-[90%] sm:max-w-[82%] md:max-w-[75%]"
+            ),
+        isOwn ? "items-end" : "items-start"
+      )}>
         {isFirstInGroup && !isOwn && (
-          <div className="flex items-center gap-2 mb-1 ml-1 scale-in-center overflow-hidden">
+          <div className="flex items-center gap-2 mb-1 ml-1 scale-in-center overflow-hidden max-w-full">
             <span className={cn(
               "text-[12.5px] font-extrabold capitalize tracking-tight truncate max-w-[120px]",
               isAi ? "text-purple-300" : "text-[#B4A0FF]"
@@ -406,11 +415,12 @@ export const MessageItem = memo(function MessageItem({
           </div>
         )}
 
-        <div className={cn("flex items-end gap-2", isOwn ? "flex-row-reverse" : "flex-row")}>
+        <div className={cn("flex items-end gap-1.5 sm:gap-2 w-full max-w-full min-w-0", isOwn ? "flex-row-reverse" : "flex-row")}>
           <div
             onClick={() => setShowActions(prev => !prev)}
             className={cn(
-              "px-4 py-2.5 rounded-2xl relative shadow-sm border transition-all duration-300 cursor-pointer md:cursor-auto",
+              "px-3.5 sm:px-4 py-2.5 rounded-2xl relative shadow-sm border transition-all duration-300 cursor-pointer md:cursor-auto min-w-0 max-w-full",
+              isAi ? "w-full" : "",
               isOwn
                 ? 'bg-gradient-to-br from-primary to-purple-600 text-white border-white/10 shadow-[0_4px_16px_rgba(113,72,235,0.15)]'
                 : isAi
@@ -434,17 +444,17 @@ export const MessageItem = memo(function MessageItem({
               />
             )}
 
-            <div className="relative z-10 pb-1.5 break-words overflow-hidden">
+            <div className="relative z-10 pb-1.5 break-words [overflow-wrap:anywhere] min-w-0 max-w-full w-full">
               {renderContent()}
               
               {!isEditing && (
                 <div className={cn(
-                  "flex items-center gap-0.5 absolute bottom-0 right-[-4px]",
-                  message.type === 'text' ? "" : "bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-full"
+                  "flex items-center gap-0.5 absolute bottom-0 right-[-2px] select-none pointer-events-none",
+                  message.type === 'text' && !isAi ? "" : "bg-black/50 backdrop-blur-md px-1.5 py-0.5 rounded-full"
                 )}>
                   <span className={cn(
                     "text-[9px] font-bold leading-none select-none tracking-tight",
-                    isOwn ? "text-white/40" : "text-[#8E9297]"
+                    isOwn ? "text-white/50" : "text-[#8E9297]"
                   )}>
                     {formattedTime}
                   </span>
