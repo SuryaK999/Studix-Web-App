@@ -23,6 +23,7 @@ import { StudyRoomThemeProvider, useStudyRoomTheme } from '@/hooks/useStudyRoomT
 import { cn } from '@/lib/utils';
 import { fetchUserRooms, fetchRoomData, leaveRoom } from '@/services/api';
 import { socketService } from '@/lib/socket';
+import { StudyBuddyIcon, StudyBuddyNavIcon } from '@/components/ui/StudyBuddyIcon';
 import { useNavigate } from 'react-router-dom';
 import { useInvisibleScroll } from '@/hooks/useInvisibleScroll';
 import { addRecentRoom } from '@/utils/recentRooms';
@@ -277,7 +278,7 @@ function StudyRoomContent({ roomId, onLeave }) {
     { id: 'chat', label: 'chat-channel', icon: Hash },
     { id: 'notes', label: 'collaborative-notes', icon: BookOpen },
     { id: 'voice', label: 'voice-lounge', icon: Mic },
-    { id: 'ai', label: 'ai-tutor-bot', icon: Bot },
+    { id: 'ai', label: 'studybuddy-ai', icon: StudyBuddyNavIcon },
   ];
 
   return (
@@ -466,7 +467,7 @@ function StudyRoomContent({ roomId, onLeave }) {
             {activeTab === 'notes' ? (
               <BookOpen className="w-4 h-4 text-purple-400" />
             ) : activeTab === 'ai' ? (
-              <Sparkles className="w-4 h-4 text-purple-400" />
+              <StudyBuddyIcon size={16} variant="gradient" className="shrink-0 drop-shadow-[0_0_8px_rgba(168,85,247,0.5)]" />
             ) : activeTab === 'voice' ? (
               <Mic className="w-4 h-4 text-emerald-400" />
             ) : (
