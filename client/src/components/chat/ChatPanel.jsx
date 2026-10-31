@@ -11,7 +11,6 @@ import {
   Mic,
   Reply,
   FileText,
-  Sparkles,
   X,
   ChevronUp,
   Plus,
