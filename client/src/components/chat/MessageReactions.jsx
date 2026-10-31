@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { useUsersStore } from '@/store/usersStore';
 import { cn } from '@/lib/utils';
+import { Plus } from 'lucide-react';
 
 import {
   Tooltip,
@@ -11,79 +12,137 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-/* ── Emoji categories (WhatsApp-style grid) ─────────────────────────── */
-const EMOJI_CATEGORIES = [
-  {
-    name: 'Quick',
-    icon: '⚡',
-    emojis: ['👍', '❤️', '😂', '😮', '🎉', '🔥', '😢', '🙏', '👏', '🤔', '😍', '💯', '✅', '👀', '🤣', '😊'],
-  },
-  {
-    name: 'Smileys',
-    icon: '😊',
-    emojis: [
-      '😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😗',
-      '😚','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🤫','🤔','🤐','🤨','😐','😑','😶',
-      '😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵',
-      '🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐','😕','😟','🙁','😮','😯','😲',
-      '😳','🥺','😦','😧','😨','😰','😥','😢','😭','😱','😖','😣','😞','😓','😩','😫',
-      '🥱','😤','😡','😠','🤬','😈','👿','💀','💩','🤡','👹','👺','👻','👽','👾','🤖',
-    ],
-  },
-  {
-    name: 'Gestures',
-    icon: '👋',
-    emojis: [
-      '👋','🤚','🖐️','✋','🖖','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆',
-      '🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','💪',
-    ],
-  },
-  {
-    name: 'Hearts',
-    icon: '❤️',
-    emojis: [
-      '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖',
-      '💘','💝','🫶',
-    ],
-  },
-  {
-    name: 'Animals',
-    icon: '🐱',
-    emojis: [
-      '🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈',
-      '🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐴','🦄','🐝','🦋','🐌',
-      '🐞','🐜',
-    ],
-  },
-  {
-    name: 'Food',
-    icon: '🍕',
-    emojis: [
-      '🍏','🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🍒','🍑','🥭','🍍','🥝','🍅','🍆',
-      '🥑','🌽','🍕','🍔','🍟','🌭','🍿','🍳','🍞','🥐','🍝','🍜','🍣','🍩','🍪','🎂',
-      '🍰','🧁','🍫','🍬','🍭','☕','🍵','🧋','🍺','🍻','🥂','🍷',
-    ],
-  },
-  {
-    name: 'Activities',
-    icon: '⚽',
-    emojis: [
-      '⚽','🏀','🏈','⚾','🎾','🏐','🎱','🏓','🏸','⛳','🏹','🥊','🎽','🛹','🎿','🏂',
-      '🎯','🎲','🧩','🎮','🎰','🎳',
-    ],
-  },
-  {
-    name: 'Symbols',
-    icon: '⭐',
-    emojis: [
-      '⭐','🌟','✨','💫','🔥','💥','🎉','🎊','🎈','🎁','🏆','🥇','🥈','🥉','✅','❌',
-      '❓','❗','💯','💤','💬','💭','♻️','⚠️','🔴','🟠','🟡','🟢','🔵','🟣','⚫','⚪',
-    ],
-  },
-];
+import { QUICK_EMOJIS, EMOJI_CATEGORIES } from './emojiData';
+export { QUICK_EMOJIS, EMOJI_CATEGORIES };
 
 const DEBOUNCE_MS = 200;
 
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+} from '@/components/ui/popover';
+
+/**
+ * High-performance, categorized Emoji Picker Grid.
+ */
+export const EmojiPickerContent = memo(function EmojiPickerContent({
+  onSelect,
+  myReaction = null,
+}) {
+  const [activeCategory, setActiveCategory] = useState(0);
+
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      className="w-[300px] max-w-[calc(100vw-32px)] bg-[#0e0f17]/98 backdrop-blur-2xl border border-purple-500/30 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden select-none"
+    >
+      {/* Category tabs */}
+      <div className="flex items-center gap-0.5 px-2.5 py-1.5 border-b border-white/[0.06] bg-white/[0.02] overflow-x-auto no-scrollbar">
+        {EMOJI_CATEGORIES.map((cat, idx) => (
+          <button
+            key={cat.name}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveCategory(idx);
+            }}
+            className={cn(
+              'w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-lg text-sm transition-all',
+              activeCategory === idx
+                ? 'bg-purple-500/20 text-white shadow-sm ring-1 ring-purple-500/30'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5 opacity-60 hover:opacity-100'
+            )}
+            title={cat.name}
+          >
+            <span className={cn('transition-transform', activeCategory === idx && 'scale-110')}>
+              {cat.icon}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Emojis grid */}
+      <div
+        className="p-2 max-h-[200px] overflow-y-auto no-scrollbar"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        <div className="grid grid-cols-7 gap-1">
+          {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(emoji);
+              }}
+              className={cn(
+                'w-9 h-9 flex items-center justify-center rounded-xl text-xl hover:scale-125 hover:bg-white/10 active:scale-95 transition-transform duration-150',
+                myReaction === emoji && 'bg-purple-500/25 ring-1 ring-purple-400/50'
+              )}
+            >
+              {emoji}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+EmojiPickerContent.propTypes = {
+  onSelect: PropTypes.func.isRequired,
+  myReaction: PropTypes.string,
+};
+
+/**
+ * Portaled, collision-aware Discord/Telegram-grade Emoji Picker Popover.
+ * Uses Radix UI Popover to render outside scroll containers and automatically flip.
+ */
+export const EmojiPickerPopover = memo(function EmojiPickerPopover({
+  isOpen,
+  onClose,
+  onSelect,
+  align = 'right',
+  myReaction = null,
+  children,
+}) {
+  return (
+    <Popover open={isOpen} onOpenChange={(open) => { if (!open) onClose?.(); }}>
+      {children ? (
+        <PopoverTrigger asChild>{children}</PopoverTrigger>
+      ) : (
+        <PopoverAnchor className="inline-block" />
+      )}
+      <PopoverContent
+        side="top"
+        align={align === 'right' ? 'end' : 'start'}
+        sideOffset={8}
+        collisionPadding={12}
+        className="w-auto p-0 border-0 bg-transparent shadow-none z-50"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <EmojiPickerContent onSelect={onSelect} myReaction={myReaction} />
+      </PopoverContent>
+    </Popover>
+  );
+});
+
+EmojiPickerPopover.propTypes = {
+  isOpen: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onSelect: PropTypes.func.isRequired,
+  align: PropTypes.oneOf(['left', 'right']),
+  myReaction: PropTypes.string,
+  children: PropTypes.node,
+};
+
+/**
+ * Message Reactions Component:
+ * Displays reaction pills under the message, allows toggling, and provides
+ * an inline "+" button to open the deterministically-anchored emoji picker.
+ */
 export const MessageReactions = memo(function MessageReactions({
   messageId,
   roomId,
@@ -96,10 +155,9 @@ export const MessageReactions = memo(function MessageReactions({
 }) {
   const { user } = useAuth();
   const [showPicker, setShowPicker] = useState(false);
-  const [activeCategory, setActiveCategory] = useState(0);
   const [pendingEmoji, setPendingEmoji] = useState(null);
 
-  const pickerRef = useRef(null);
+  const pickerAnchorRef = useRef(null);
   const debounceRef = useRef(null);
   const pendingRef = useRef(false);
 
@@ -135,24 +193,7 @@ export const MessageReactions = memo(function MessageReactions({
     };
   }, [socket, messageId]);
 
-  // Outside-click to close emoji picker
-  useEffect(() => {
-    if (!isPickerOpen) return;
-    const handleClick = (e) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target)) {
-        closePicker();
-      }
-    };
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClick);
-    }, 0);
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClick);
-    };
-  }, [isPickerOpen, closePicker]);
-
-  // Defensively normalize reactions prop to always be a key -> string[] dictionary
+  // Defensively normalize reactions prop to key -> string[] dictionary
   const normalizedReactions = useMemo(() => {
     if (!reactions || typeof reactions !== 'object') return {};
 
@@ -181,7 +222,7 @@ export const MessageReactions = memo(function MessageReactions({
 
     const updated = {};
     for (const [key, users] of Object.entries(normalizedReactions)) {
-      const filtered = users.filter(uid => uid !== user.uid);
+      const filtered = users.filter((uid) => uid !== user.uid);
       if (filtered.length > 0) updated[key] = filtered;
     }
 
@@ -194,7 +235,7 @@ export const MessageReactions = memo(function MessageReactions({
     return updated;
   }, [normalizedReactions, pendingEmoji, user]);
 
-  // ── Single-reaction-per-user toggle (WhatsApp-style) ──
+  // ── Single-reaction-per-user toggle (Discord/WhatsApp-style) ──
   const toggleReaction = useCallback((emoji) => {
     if (!user || !socket || pendingRef.current) return;
 
@@ -217,31 +258,48 @@ export const MessageReactions = memo(function MessageReactions({
     if (!user || !Array.isArray(users) || users.length === 0) return '';
     const storeUsers = useUsersStore.getState().users || {};
 
-    const names = users.map(uid => {
+    const names = users.map((uid) => {
       if (uid === user.uid) return 'You';
       return (
         reactionUsers?.[uid] ||
         storeUsers[uid]?.displayName ||
         storeUsers[uid]?.name ||
         storeUsers[uid]?.username ||
-        'Unknown User'
+        'Member'
       );
     });
 
     if (names.length <= 3) return names.join(', ');
-    return `${names.slice(0, 3).join(', ')} and ${names.length - 3} more`;
+    return `${names.slice(0, 3).join(', ')} and ${names.length - 3} others`;
   }, [user, reactionUsers]);
 
+  const hasAnyReactions = Object.values(effectiveReactions).some((u) => Array.isArray(u) && u.length > 0);
+
+  if (!hasAnyReactions && !isPickerOpen) {
+    return (
+      <div className="relative inline-block" ref={pickerAnchorRef}>
+        {/* Hidden button for backwards compatibility with DOM triggers */}
+        <button
+          data-reaction-area="1"
+          onClick={() => setShowPicker(true)}
+          className="hidden"
+          aria-hidden="true"
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="relative" ref={pickerRef}>
-      <button 
-        data-reaction-area="1" 
-        onClick={() => setShowPicker(true)} 
-        className="hidden" 
-        aria-hidden="true" 
+    <div className="relative inline-block" ref={pickerAnchorRef}>
+      <button
+        data-reaction-area="1"
+        onClick={() => setShowPicker(true)}
+        className="hidden"
+        aria-hidden="true"
       />
-      <div className={cn('flex items-center gap-1 flex-wrap', isOwn ? 'justify-end' : 'justify-start')}>
-        {/* ── Existing reaction badges (always visible) ── */}
+
+      <div className={cn('flex items-center gap-1.5 flex-wrap', isOwn ? 'justify-end' : 'justify-start')}>
+        {/* ── Existing reaction badges ── */}
         {Object.entries(effectiveReactions).map(([emoji, users]) => {
           if (!Array.isArray(users) || users.length === 0) return null;
           const hasReacted = Boolean(user && users.includes(user.uid));
@@ -250,15 +308,16 @@ export const MessageReactions = memo(function MessageReactions({
             <Tooltip key={emoji}>
               <TooltipTrigger asChild>
                 <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileHover={{ scale: 1.08 }}
+                  whileTap={{ scale: 0.92 }}
                   onClick={() => toggleReaction(emoji)}
                   aria-label={`React with ${emoji}`}
-                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-all duration-150 ${
+                  className={cn(
+                    'flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold transition-all duration-150 select-none border',
                     hasReacted
-                      ? 'bg-primary/20 text-white ring-1 ring-primary/40'
-                      : 'bg-[#1C1F2E] text-[#A1A3AB] border border-[#2A2D3E] hover:bg-[#252839]'
-                  }`}
+                      ? 'bg-purple-600/25 text-purple-200 border-purple-500/40 shadow-[0_0_12px_rgba(168,85,247,0.2)]'
+                      : 'bg-[#181926]/90 text-zinc-300 border-white/[0.08] hover:bg-[#202234] hover:text-white'
+                  )}
                 >
                   <motion.span
                     key={`${emoji}-${users.length}`}
@@ -268,75 +327,52 @@ export const MessageReactions = memo(function MessageReactions({
                   >
                     {emoji}
                   </motion.span>
-                  <span>{users.length}</span>
+                  <span className="text-[11px] font-mono">{users.length}</span>
                 </motion.button>
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="bg-popover/95 backdrop-blur-xl border-border text-popover-foreground text-[11px] px-2.5 py-1.5 rounded-lg shadow-xl"
+                className="bg-[#0e0f17]/95 backdrop-blur-xl border border-white/10 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-xl"
               >
                 {getReactorNames(users)}
               </TooltipContent>
             </Tooltip>
           );
         })}
+
+        {/* Inline "+" button to quickly add reaction when badges are already present */}
+        {hasAnyReactions && (
+          <EmojiPickerPopover
+            isOpen={isPickerOpen}
+            onClose={closePicker}
+            onSelect={toggleReaction}
+            align={isOwn ? 'right' : 'left'}
+            myReaction={myReaction}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPicker((prev) => !prev);
+              }}
+              title="Add reaction"
+              className="w-6 h-6 rounded-full bg-[#181926]/80 border border-white/[0.08] hover:border-purple-500/40 hover:bg-purple-500/15 flex items-center justify-center text-zinc-400 hover:text-white transition-all text-xs"
+            >
+              <Plus size={12} />
+            </button>
+          </EmojiPickerPopover>
+        )}
       </div>
 
-      {/* ── Full emoji picker (WhatsApp-style) ── */}
-      <AnimatePresence>
-        {isPickerOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-            className={cn(
-              'absolute bottom-full mb-3 bg-[#0c0c14]/95 backdrop-blur-2xl border border-white/[0.05] shadow-[0_20px_50px_rgba(0,0,0,0.6)] z-50 overflow-hidden',
-              isOwn ? 'right-0' : 'left-0'
-            )}
-            style={{ width: 'min(300px, 85vw)', borderRadius: '24px' }}
-          >
-            {/* Category tabs - WhatsApp Style */}
-            <div className="flex items-center gap-1 px-3 py-2 border-b border-white/[0.03] bg-white/[0.01] overflow-x-auto scrollbar-none">
-              {EMOJI_CATEGORIES.map((cat, idx) => (
-                <button
-                  key={cat.name}
-                  onClick={() => setActiveCategory(idx)}
-                  className={`w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl text-base transition-all duration-200 ${
-                    activeCategory === idx
-                      ? 'bg-primary/20 text-white shadow-lg shadow-primary/10'
-                      : 'opacity-40 hover:opacity-100'
-                  }`}
-                  title={cat.name}
-                >
-                  <span className={cn('transition-transform duration-200', activeCategory === idx && 'scale-110')}>
-                    {cat.icon}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="px-2 pb-3 max-h-[220px] overflow-y-auto mt-2" style={{ scrollbarWidth: 'none' }}>
-              <div className="grid grid-cols-7 gap-1">
-                {EMOJI_CATEGORIES[activeCategory].emojis.map((emoji) => (
-                  <motion.button
-                    key={emoji}
-                    whileHover={{ scale: 1.4 }}
-                    whileTap={{ scale: 0.8 }}
-                    onClick={() => toggleReaction(emoji)}
-                    className={cn(
-                      'w-10 h-10 flex items-center justify-center rounded-xl text-2xl transition-all duration-200',
-                      myReaction === emoji ? 'bg-primary/10' : 'bg-transparent'
-                    )}
-                  >
-                    {emoji}
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {!hasAnyReactions && isPickerOpen && (
+        <EmojiPickerPopover
+          isOpen={isPickerOpen}
+          onClose={closePicker}
+          onSelect={toggleReaction}
+          align={isOwn ? 'right' : 'left'}
+          myReaction={myReaction}
+        />
+      )}
     </div>
   );
 });
