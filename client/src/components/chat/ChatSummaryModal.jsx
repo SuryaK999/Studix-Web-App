@@ -19,6 +19,7 @@ import {
 import { toast } from 'sonner';
 import { isGroqConfigured } from '@/services/aiService';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
+import { Tip } from '@/components/ui/tip';
 import { cn } from '@/lib/utils';
 
 export function ChatSummaryModal({
@@ -103,14 +104,15 @@ export function ChatSummaryModal({
             </div>
 
             {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => onOpenChange?.(false)}
-              className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
-              title="Close"
-            >
-              <X className="w-4 h-4" />
-            </button>
+            <Tip label="Close summary (Esc)" side="bottom">
+              <button
+                type="button"
+                onClick={() => onOpenChange?.(false)}
+                className="text-zinc-400 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </Tip>
           </div>
         </div>
 
@@ -147,30 +149,33 @@ export function ChatSummaryModal({
         {/* Modal Footer Actions */}
         <div className="px-6 py-3 border-t border-white/[0.08] bg-[#0c0d12]/90 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={onRegenerate}
-              disabled={isSummarizing}
-              className="text-zinc-400 hover:text-white hover:bg-white/5 gap-1.5 text-xs h-8 px-2.5 rounded-lg"
-            >
-              <RefreshCw className={cn("w-3.5 h-3.5", isSummarizing && "animate-spin text-indigo-400")} />
-              Regenerate
-            </Button>
+            <Tip label="Regenerate room summary" side="top">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onRegenerate}
+                disabled={isSummarizing}
+                className="text-zinc-400 hover:text-white hover:bg-white/5 gap-1.5 text-xs h-8 px-2.5 rounded-lg"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isSummarizing && "animate-spin text-indigo-400")} />
+                Regenerate
+              </Button>
+            </Tip>
 
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={handleDownloadMarkdown}
-              disabled={isSummarizing || !summary}
-              className="text-zinc-400 hover:text-white hover:bg-white/5 gap-1.5 text-xs h-8 px-2.5 rounded-lg"
-              title="Save as markdown"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Download .md
-            </Button>
+            <Tip label="Download summary as markdown file" side="top">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleDownloadMarkdown}
+                disabled={isSummarizing || !summary}
+                className="text-zinc-400 hover:text-white hover:bg-white/5 gap-1.5 text-xs h-8 px-2.5 rounded-lg"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Download .md
+              </Button>
+            </Tip>
           </div>
 
           <div className="flex items-center gap-2">
