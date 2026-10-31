@@ -37,7 +37,8 @@ export const MessageItem = memo(function MessageItem({
   useEffect(() => {
     if (isEditing && editInputRef.current) {
       editInputRef.current.focus();
-      editInputRef.current.setSelectionRange(editText.length, editText.length);
+      const len = editInputRef.current.value.length;
+      editInputRef.current.setSelectionRange(len, len);
     }
   }, [isEditing]);
 
