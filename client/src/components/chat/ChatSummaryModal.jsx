@@ -21,6 +21,7 @@ import { isGroqConfigured } from '@/services/aiService';
 import { MarkdownRenderer } from '@/components/chat/MarkdownRenderer';
 import { Tip } from '@/components/ui/tip';
 import { cn } from '@/lib/utils';
+import { StudyBuddyAvatar } from '@/components/ui/StudyBuddyIcon';
 
 export function ChatSummaryModal({
   open,
@@ -81,9 +82,7 @@ export function ChatSummaryModal({
         {/* Sleek, Clean Modal Header */}
         <div className="px-6 py-4 border-b border-white/[0.08] bg-[#0c0d12]/90 flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/[0.06] border border-white/10 flex items-center justify-center text-zinc-200">
-              <Sparkles className="w-4 h-4 text-indigo-400" />
-            </div>
+            <StudyBuddyAvatar size="md" shape="squircle" glow />
             <div>
               <DialogTitle className="text-base font-semibold text-zinc-100 tracking-tight leading-none mb-1">
                 Room Discussion Summary
