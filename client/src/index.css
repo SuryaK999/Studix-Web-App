@@ -508,6 +508,108 @@ textarea:focus-visible {
   display: none;
 }
 
+/* Studix TipTap Collaborative Notes */
+.tiptap-editor.ProseMirror {
+  color: #e4e4e7;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.tiptap-editor.ProseMirror:focus {
+  outline: none;
+}
+
+.tiptap-editor.ProseMirror h1 {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tiptap-editor.ProseMirror h2 {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  letter-spacing: -0.015em;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor.ProseMirror h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e4e4e7;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor.ProseMirror p {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor.ProseMirror ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor.ProseMirror ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-editor.ProseMirror li {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.tiptap-editor.ProseMirror blockquote {
+  border-left: 3px solid #8b5cf6;
+  background: rgba(139, 92, 246, 0.08);
+  padding: 0.5rem 1rem;
+  border-radius: 0 0.5rem 0.5rem 0;
+  margin: 1rem 0;
+  color: #d8b4fe;
+  font-style: italic;
+}
+
+.tiptap-editor.ProseMirror code {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c084fc;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.25rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.tiptap-editor.ProseMirror pre {
+  background: #090a0f;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+.tiptap-editor.ProseMirror pre code {
+  background: transparent;
+  color: #e4e4e7;
+  padding: 0;
+  font-size: 0.85rem;
+}
+
+.tiptap-editor.ProseMirror hr {
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 1.5rem 0;
+}
+
 @media print {
   /* Override dark theme globally during print */
   html.print-mode,
