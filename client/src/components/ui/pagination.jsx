@@ -6,7 +6,7 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { buttonVariants, type Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 
 function Pagination({ className, ...props }) {
   return (
@@ -37,7 +37,6 @@ function PaginationItem({ ...props }) {
   return <li data-slot="pagination-item" {...props} />
 }
 
-  React.ComponentProps<"a">
 
 function PaginationLink({
   className,
