@@ -9,7 +9,17 @@ function registerChatHandlers(socket, io) {
       if (!roomId || typeof roomId !== 'string') return;
       if (!message || typeof message !== 'object') return;
 
-      const { type = 'text', text, fileUrl, fileName, fileSize, fileDuration } = message;
+      const {
+        type = 'text',
+        text,
+        fileUrl,
+        fileName,
+        fileSize,
+        fileDuration,
+        voiceUrl,
+        voiceDuration,
+        voice,
+      } = message;
 
       if (!socket.user) return; 
 
@@ -29,6 +39,9 @@ function registerChatHandlers(socket, io) {
       const senderUsername = isAiMessage ? 'ai_assistant' : (socket.user.username || message.senderUsername || null);
       const senderPhotoURL = isAiMessage ? null : (socket.user.photoURL || null);
 
+      const resolvedVoiceUrl = voiceUrl || (type === 'voice' ? fileUrl : null) || voice?.url || null;
+      const resolvedVoiceDuration = voiceDuration ?? fileDuration ?? voice?.duration ?? null;
+
       const msgPayload = {
         senderId,
         senderName,
@@ -37,10 +50,13 @@ function registerChatHandlers(socket, io) {
         isAi: isAiMessage,
         type,
         text:           safeText,
-        fileUrl:        fileUrl || null,
+        fileUrl:        fileUrl || resolvedVoiceUrl || null,
         fileName:       fileName || null,
         fileSize:       fileSize || null,
-        fileDuration:   fileDuration || null,
+        fileDuration:   fileDuration ?? resolvedVoiceDuration,
+        voiceUrl:       resolvedVoiceUrl,
+        voiceDuration:  resolvedVoiceDuration,
+        voice:          voice || (resolvedVoiceUrl ? { url: resolvedVoiceUrl, duration: resolvedVoiceDuration } : null),
         replyTo:        message.replyTo || null,
         reactions:      {},
         createdAt:      new Date(),
