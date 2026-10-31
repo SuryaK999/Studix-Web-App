@@ -31,13 +31,7 @@ export function MembersList({ roomId }) {
   const [loading, setLoading] = useState(true);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [customStatus, setCustomStatus] = useState(user?.status || '');
-  const [prevStatus, setPrevStatus] = useState(user?.status);
-  if (user?.status !== prevStatus) {
-    setPrevStatus(user?.status);
-    if (user?.status) {
-      setCustomStatus(user.status);
-    }
-  }
+
 
   const [speakingUsers, setSpeakingUsers] = useState(new Set()); // userId set
   const socketToUserRef = useRef({}); // socketId -> userId
@@ -62,10 +56,13 @@ export function MembersList({ roomId }) {
   });
 
   useEffect(() => {
-    const handleOpen = () => setShowStatusDialog(true);
+    const handleOpen = () => {
+      setCustomStatus(user?.status || '');
+      setShowStatusDialog(true);
+    };
     window.addEventListener('studix:open-status-dialog', handleOpen);
     return () => window.removeEventListener('studix:open-status-dialog', handleOpen);
-  }, []);
+  }, [user?.status]);
 
   const saveStatus = useCallback(async () => {
     const trimmed = customStatus.trim();
@@ -87,58 +84,61 @@ export function MembersList({ roomId }) {
   // Handle Voice Speaking Events
   useEffect(() => {
     let socket = null;
-    
-    const setupVoiceListeners = async () => {
-      try {
-        socket = await socketService.connect();
-        
-        socket.on('voice:user-joined', ({ userId, socketId }) => {
-          socketToUserRef.current[socketId] = userId;
+
+    const handleUserJoined = ({ userId, socketId }) => {
+      socketToUserRef.current[socketId] = userId;
+    };
+
+    const handleExistingMembers = ({ members: memberList }) => {
+      memberList.forEach(m => {
+        socketToUserRef.current[m.socketId] = m.userId;
+      });
+    };
+
+    const handleUserLeft = ({ socketId }) => {
+      const userId = socketToUserRef.current[socketId];
+      if (userId) {
+        setSpeakingUsers(prev => {
+          const next = new Set(prev);
+          next.delete(userId);
+          return next;
         });
-
-        socket.on('voice:existing-members', ({ members }) => {
-          members.forEach(m => {
-            socketToUserRef.current[m.socketId] = m.userId;
-          });
-        });
-
-        socket.on('voice:user-left', ({ socketId }) => {
-          const userId = socketToUserRef.current[socketId];
-          if (userId) {
-            setSpeakingUsers(prev => {
-              const next = new Set(prev);
-              next.delete(userId);
-              return next;
-            });
-            delete socketToUserRef.current[socketId];
-          }
-        });
-
-        socket.on('voice:user-speaking', ({ socketId, speaking }) => {
-          const userId = socketToUserRef.current[socketId];
-          if (!userId) return;
-
-          setSpeakingUsers(prev => {
-            const next = new Set(prev);
-            if (speaking) next.add(userId);
-            else next.delete(userId);
-            return next;
-          });
-        });
-
-        // The 'presence' object comes from useRoomPresence, which now centrally handles 'presence:profile_sync'
-      } catch (err) {
-        console.error("Voice listener setup failed:", err);
+        delete socketToUserRef.current[socketId];
       }
     };
 
-    setupVoiceListeners();
+    const handleUserSpeaking = ({ socketId, speaking }) => {
+      const userId = socketToUserRef.current[socketId];
+      if (!userId) return;
+
+      setSpeakingUsers(prev => {
+        const next = new Set(prev);
+        if (speaking) next.add(userId);
+        else next.delete(userId);
+        return next;
+      });
+    };
+
+    const setupVoiceListeners = async () => {
+      try {
+        socket = await socketService.connect();
+        socket.on('voice:user-joined', handleUserJoined);
+        socket.on('voice:existing-members', handleExistingMembers);
+        socket.on('voice:user-left', handleUserLeft);
+        socket.on('voice:user-speaking', handleUserSpeaking);
+      } catch (err) {
+        console.error('Voice listener setup failed:', err);
+      }
+    };
+
+    void setupVoiceListeners();
 
     return () => {
       if (socket) {
-        socket.off('voice:user-joined');
-        socket.off('voice:user-left');
-        socket.off('voice:user-speaking');
+        socket.off('voice:user-joined', handleUserJoined);
+        socket.off('voice:existing-members', handleExistingMembers);
+        socket.off('voice:user-left', handleUserLeft);
+        socket.off('voice:user-speaking', handleUserSpeaking);
       }
     };
   }, [roomId]);
@@ -151,7 +151,10 @@ export function MembersList({ roomId }) {
           variant="secondary"
           size="sm"
           className="w-full text-xs font-medium bg-[#1A1A22] hover:bg-[#252735] text-[#A1A3AB] hover:text-white border-0"
-          onClick={() => setShowStatusDialog(true)}
+          onClick={() => {
+            setCustomStatus(user?.status || '');
+            setShowStatusDialog(true);
+          }}
         >
           Set Status
         </Button>
