@@ -1,16 +1,10 @@
 import * as React from "react"
-import useEmblaCarousel, {
-  type UseEmblaCarouselType,
-} from "embla-carousel-react"
+import useEmblaCarousel from "embla-carousel-react"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
-type CarouselApi = UseEmblaCarouselType[1]
-type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
-type CarouselOptions = UseCarouselParameters[0]
-type CarouselPlugin = UseCarouselParameters[1]
 
 const CarouselContext = React.createContext(null)
 
@@ -58,7 +52,7 @@ function Carousel({
   }, [api])
 
   const handleKeyDown = React.useCallback(
-    (event<HTMLDivElement>) => {
+    (event) => {
       if (event.key === "ArrowLeft") {
         event.preventDefault()
         scrollPrev()
@@ -214,7 +208,6 @@ function CarouselNext({
 }
 
 export {
-  type CarouselApi,
   Carousel,
   CarouselContent,
   CarouselItem,
