@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, useRef, Suspense, lazy } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { usePresence } from '@/hooks/usePresence';
