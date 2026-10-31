@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Tip } from '@/components/ui/tip';
 import {
   Bold, Italic, List, ListOrdered, Quote, Code, Heading1, Heading2,
-  Undo, Redo, Users, MessageSquare, X, Send, Download, Loader2, BookOpen
+  Undo, Redo, Users, MessageSquare, X, Send, Download, Loader2, BookOpen,
+  Copy, Check, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +28,7 @@ export function NotesEditor({ roomId, roomName }) {
   const [newComment, setNewComment] = useState('');
   const [selectedText, setSelectedText] = useState('');
   const [selectionPosition, setSelectionPosition] = useState(null);
+  const [copiedNote, setCopiedNote] = useState(false);
 
   const { user } = useAuth();
   const { socket } = useSocket(roomId);
@@ -78,7 +80,7 @@ export function NotesEditor({ roomId, roomName }) {
   // ─── Editor ───────────────────────────────────────────────────
   const editor = useEditor({
     extensions: [StarterKit],
-    content: '<p>Start collaborating on notes...</p>',
+    content: '',
     onUpdate: ({ editor }) => {
       isLocalUpdateRef.current = true;
       setLocalTypingFalse(editor);
@@ -264,6 +266,28 @@ export function NotesEditor({ roomId, roomName }) {
     }
   }, [editor, roomName]);
 
+  const editorStats = useMemo(() => {
+    if (!editor) return { words: 0, characters: 0 };
+    const text = editor.state.doc.textContent || '';
+    const trimmed = text.trim();
+    const words = trimmed ? trimmed.split(/\s+/).length : 0;
+    const characters = text.length;
+    return { words, characters };
+  }, [editor]);
+
+  const copyNoteText = useCallback(async () => {
+    if (!editor) return;
+    try {
+      const text = editor.state.doc.textContent || '';
+      await navigator.clipboard.writeText(text);
+      setCopiedNote(true);
+      setTimeout(() => setCopiedNote(false), 2000);
+      toast.success('Notes copied to clipboard');
+    } catch {
+      toast.error('Failed to copy');
+    }
+  }, [editor]);
+
   // ─── Listen for Radial Menu Actions ───────────────────────────
   useEffect(() => {
     if (!editor) return;
@@ -319,92 +343,248 @@ export function NotesEditor({ roomId, roomName }) {
     <div 
       id={`notes-editor-${roomId}`}
       data-radial-context="notes"
-      className="flex flex-col h-full bg-[#09090b] relative overflow-hidden font-sans"
+      className="flex flex-col h-full bg-[#09090b] relative overflow-hidden font-sans select-text"
     >
       {/* Subtle radial glow of deep purple in the center */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
 
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-[#27272a]/30 bg-[#09090b]/40 backdrop-blur-xl shrink-0 z-20">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <Tip label="Bold (Ctrl+B)" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBold().run()}      className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('bold') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Bold  className="h-4.5 w-4.5" /></Button></Tip>
-          <Tip label="Italic (Ctrl+I)" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleItalic().run()}    className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('italic') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Italic  className="h-4.5 w-4.5" /></Button></Tip>
-          <div className="w-px h-6 bg-[#1e1f2b] mx-2" />
-          <Tip label="Heading 1" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Heading1 className="h-4.5 w-4.5" /></Button></Tip>
-          <Tip label="Heading 2" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Heading2 className="h-4.5 w-4.5" /></Button></Tip>
-          <div className="w-px h-6 bg-[#1e1f2b] mx-2" />
-          <Tip label="Bullet list" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBulletList().run()}  className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><List  className="h-4.5 w-4.5" /></Button></Tip>
-          <Tip label="Numbered list" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><ListOrdered  className="h-4.5 w-4.5" /></Button></Tip>
-          <div className="w-px h-6 bg-[#1e1f2b] mx-2" />
-          <Tip label="Blockquote" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('blockquote') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Quote className="h-4.5 w-4.5" /></Button></Tip>
-          <Tip label="Inline code" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().toggleCode().run()}       className={cn("h-9 w-9 rounded-lg transition-all", editor.isActive('code') ? 'bg-indigo-500/20 text-indigo-400' : 'text-[#8E9297] hover:bg-[#1C1D24]')}><Code  className="h-4.5 w-4.5" /></Button></Tip>
-          <div className="w-px h-6 bg-[#1e1f2b] mx-2" />
-          <Tip label="Undo (Ctrl+Z)" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="text-[#8E9297] hover:text-white disabled:opacity-20 transition-colors"><Undo className="h-4.5 w-4.5" /></Button></Tip>
-          <Tip label="Redo (Ctrl+Y)" side="bottom"><Button variant="ghost" size="icon" onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="text-[#8E9297] hover:text-white disabled:opacity-20 transition-colors"><Redo className="h-4.5 w-4.5" /></Button></Tip>
-          
-          <div className="w-px h-6 bg-[#1e1f2b] mx-2" />
-          <Tip label="Export to PDF" side="bottom">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={exportToPDF} 
-              disabled={exportLoading}
-              className="text-[#8E9297] hover:text-[#7e56f0] hover:bg-[#7e56f0]/10 transition-colors duration-200"
-            >
-              {exportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4.5 w-4.5" />}
-            </Button>
-          </Tip>
+      {/* ── 1. Responsive & Polished Toolbar ── */}
+      <div className="flex items-center justify-between px-3 md:px-6 py-2.5 border-b border-[#27272a]/30 bg-[#09090b]/80 backdrop-blur-xl shrink-0 z-20 gap-3 overflow-x-auto no-scrollbar">
+        {/* Left Formatting Tools Group */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Text Style Pill */}
+          <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/5 rounded-xl p-0.5">
+            <Tip label="Bold (Ctrl+B)" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleBold().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('bold') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Bold className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Italic (Ctrl+I)" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleItalic().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('italic') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Italic className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Inline code" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleCode().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('code') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Code className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Blockquote" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleBlockquote().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('blockquote') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Quote className="h-4 w-4" />
+              </Button>
+            </Tip>
+          </div>
+
+          <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+
+          {/* Headings Pill */}
+          <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/5 rounded-xl p-0.5">
+            <Tip label="Heading 1" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('heading', { level: 1 }) ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Heading1 className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Heading 2" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('heading', { level: 2 }) ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <Heading2 className="h-4 w-4" />
+              </Button>
+            </Tip>
+          </div>
+
+          <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+
+          {/* Lists Pill */}
+          <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/5 rounded-xl p-0.5">
+            <Tip label="Bullet list" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleBulletList().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('bulletList') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Numbered list" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().toggleOrderedList().run()}
+                className={cn("h-8 w-8 rounded-lg transition-all", editor.isActive('orderedList') ? 'bg-purple-500/25 text-purple-300 ring-1 ring-purple-400/40' : 'text-[#8E9297] hover:text-white hover:bg-white/5')}
+              >
+                <ListOrdered className="h-4 w-4" />
+              </Button>
+            </Tip>
+          </div>
+
+          <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+
+          {/* History Pill */}
+          <div className="flex items-center gap-0.5 bg-white/[0.03] border border-white/5 rounded-xl p-0.5">
+            <Tip label="Undo (Ctrl+Z)" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().undo().run()}
+                disabled={!editor.can().undo()}
+                className="h-8 w-8 rounded-lg text-[#8E9297] hover:text-white disabled:opacity-20 transition-colors"
+              >
+                <Undo className="h-4 w-4" />
+              </Button>
+            </Tip>
+            <Tip label="Redo (Ctrl+Y)" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => editor.chain().focus().redo().run()}
+                disabled={!editor.can().redo()}
+                className="h-8 w-8 rounded-lg text-[#8E9297] hover:text-white disabled:opacity-20 transition-colors"
+              >
+                <Redo className="h-4 w-4" />
+              </Button>
+            </Tip>
+          </div>
+
+          <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+
+          {/* Quick Actions (Export PDF & Copy Text) */}
+          <div className="flex items-center gap-1">
+            <Tip label="Export to PDF" side="bottom">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={exportToPDF} 
+                disabled={exportLoading}
+                className="h-8 w-8 rounded-lg text-[#8E9297] hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+              >
+                {exportLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              </Button>
+            </Tip>
+
+            <Tip label="Copy All Notes" side="bottom">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={copyNoteText}
+                className="h-8 w-8 rounded-lg text-[#8E9297] hover:text-purple-300 hover:bg-purple-500/10 transition-colors"
+              >
+                {copiedNote ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </Tip>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => setShowComments(!showComments)} className={showComments ? 'bg-accent text-accent-foreground' : ''}>
-            <MessageSquare className="h-4 w-4 mr-1" />
-            {comments.filter(c => !c.resolved).length}
+        {/* Right Info & Live Collaboration Group */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          {/* Word Count Indicator */}
+          <span className="hidden sm:inline-block text-[11px] font-medium text-zinc-400 bg-white/[0.03] border border-white/5 px-2.5 py-1 rounded-full whitespace-nowrap">
+            {editorStats.words} words
+          </span>
+
+          {/* Comments Toggle Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowComments(!showComments)}
+            className={cn(
+              "h-8 px-2.5 rounded-lg text-xs font-semibold gap-1.5 transition-all border",
+              showComments
+                ? 'bg-purple-500/20 text-purple-200 border-purple-500/30'
+                : 'bg-white/[0.03] text-zinc-300 border-white/5 hover:text-white hover:bg-white/5'
+            )}
+          >
+            <MessageSquare className="h-3.5 w-3.5 text-purple-400" />
+            <span>Comments</span>
+            {comments.filter(c => !c.resolved).length > 0 && (
+              <span className="ml-0.5 px-1.5 py-0.2 rounded-full bg-purple-500 text-white text-[10px] font-bold">
+                {comments.filter(c => !c.resolved).length}
+              </span>
+            )}
           </Button>
-          <Badge variant="secondary" className="flex items-center gap-1 bg-green-500/10 text-green-500 border-green-500/20">
-            <Users className="h-3 w-3" />
-            Live Sync
-          </Badge>
-          {isSaving ? (
-            <span className="text-xs font-medium text-amber-500 animate-pulse w-24 text-right">Saving...</span>
-          ) : lastSaved ? (
-            <span className="text-xs text-muted-foreground w-24 text-right">
-              {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          ) : (
-            <span className="w-24" />
-          )}
+
+          {/* Live Sync Badge */}
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold whitespace-nowrap shadow-[0_0_10px_rgba(16,185,129,0.15)]">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="hidden sm:inline">Live Sync</span>
+          </div>
+
+          {/* Saving Status Indicator */}
+          <div className="text-[11px] text-right min-w-[70px]">
+            {isSaving ? (
+              <span className="font-semibold text-amber-400 animate-pulse">Saving...</span>
+            ) : lastSaved ? (
+              <span className="text-zinc-500 font-medium">
+                {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            ) : null}
+          </div>
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Editor */}
-        <div className="flex-1 overflow-y-auto p-8 relative scrollbar-hide notes-scroll-area">
-          <EditorContent editor={editor} className="tiptap-editor ProseMirror h-full focus:outline-none min-h-[500px]" />
+      {/* ── 2. Main Content Area ── */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {/* Editor Canvas */}
+        <div className="flex-1 overflow-y-auto px-4 sm:px-8 md:px-12 py-6 relative scrollbar-hide notes-scroll-area">
+          <div className="max-w-4xl mx-auto min-h-[500px]">
+            <EditorContent editor={editor} className="tiptap-editor ProseMirror h-full focus:outline-none" />
+          </div>
           
-          {/* Welcome Empty State - Premium Minimalist */}
-          {(editor.getHTML() === '<p>Start collaborating on notes...</p>' || editor.getHTML() === '<p></p>') && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center pointer-events-none">
+          {/* Welcome Empty State */}
+          {editor.isEmpty && (
+            <div
+              onClick={() => editor.chain().focus().run()}
+              className="absolute inset-0 z-10 flex flex-col items-center justify-center p-8 text-center cursor-text"
+            >
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="flex flex-col items-center gap-6"
+                transition={{ duration: 0.5 }}
+                className="flex flex-col items-center gap-4 pointer-events-none"
               >
-                <div className="w-20 h-20 rounded-full bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-2xl shadow-indigo-500/10">
-                  <BookOpen className="w-10 h-10 text-indigo-500" />
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center shadow-2xl shadow-purple-500/15">
+                  <BookOpen className="w-8 h-8 text-purple-300" />
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-bold tracking-tight text-white">Collaborative Notes</h2>
-                  <p className="text-muted-foreground text-sm max-w-[320px] leading-relaxed">
-                    Build knowledge together in real-time. Document ideas, drafts, and project goals with your team.
+                <div className="space-y-1.5">
+                  <h2 className="text-2xl font-bold tracking-tight text-white">Collaborative Study Notes</h2>
+                  <p className="text-zinc-400 text-xs md:text-sm max-w-sm leading-relaxed">
+                    Capture lecture highlights, synthesize takeaways, or ask StudyBuddy AI to append explanations directly here.
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/5 border border-indigo-500/10">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">
-                    Syncing Live
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-[10px] font-bold text-purple-300 uppercase tracking-widest leading-none">
+                    Click anywhere to start typing
                   </span>
                 </div>
               </motion.div>
@@ -412,49 +592,86 @@ export function NotesEditor({ roomId, roomName }) {
           )}
         </div>
 
-        {/* Comments Sidebar */}
+        {/* ── 3. Comments Sidebar / Mobile Drawer ── */}
         <AnimatePresence>
           {showComments && (
             <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: 280, opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              className="border-l border-border bg-background/80 backdrop-blur-sm overflow-hidden"
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+              className="absolute inset-y-0 right-0 z-40 w-full sm:w-80 border-l border-white/10 bg-[#0c0d14]/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col"
             >
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                  <h4 className="font-semibold text-sm">Comments</h4>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowComments(false)}><X className="h-4 w-4" /></Button>
+              <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-purple-400" />
+                  <h4 className="font-bold text-sm text-white">Discussion Comments</h4>
                 </div>
-
-                <ScrollArea className="flex-1 p-4">
-                  <div className="space-y-3">
-                    {comments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">No comments yet. Select text to add a comment.</p>
-                    ) : (
-                      comments.filter(c => !c.resolved).map((comment) => (
-                        <motion.div key={comment.id} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="p-3 bg-card text-card-foreground rounded-lg border border-border">
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-xs font-medium">{comment.authorName}</span>
-                            <Button variant="ghost" size="sm" className="h-5 text-xs text-muted-foreground hover:text-foreground" onClick={() => resolveComment(comment.id)}>Resolve</Button>
-                          </div>
-                          <p className="text-sm">{comment.text}</p>
-                        </motion.div>
-                      ))
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {selectedText && (
-                  <div className="p-3 border-t border-border bg-card/50">
-                    <p className="text-xs text-muted-foreground mb-2 italic">"{selectedText.slice(0, 30)}..."</p>
-                    <div className="flex gap-2">
-                      <Input value={newComment} onChange={(e) => setNewComment(e.target.value)} placeholder="Add comment..." className="flex-1 text-sm h-8" />
-                      <Button size="icon" className="h-8 w-8" onClick={addComment} disabled={!newComment.trim()}><Send className="h-3.5 w-3.5" /></Button>
-                    </div>
-                  </div>
-                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg"
+                  onClick={() => setShowComments(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
+
+              <ScrollArea className="flex-1 p-4">
+                <div className="space-y-3">
+                  {comments.length === 0 ? (
+                    <div className="text-center py-8 px-4 text-zinc-500 text-xs leading-relaxed">
+                      No comments yet. Select any text in the note to start a contextual discussion.
+                    </div>
+                  ) : (
+                    comments.filter(c => !c.resolved).map((comment) => (
+                      <motion.div
+                        key={comment.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-3 bg-[#131422]/90 text-white rounded-xl border border-purple-500/20 shadow-sm"
+                      >
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-purple-200">{comment.authorName}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 px-2 text-[10px] text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded"
+                            onClick={() => resolveComment(comment.id)}
+                          >
+                            Resolve
+                          </Button>
+                        </div>
+                        <p className="text-xs text-zinc-300 leading-relaxed">{comment.text}</p>
+                      </motion.div>
+                    ))
+                  )}
+                </div>
+              </ScrollArea>
+
+              {selectedText && (
+                <div className="p-3 border-t border-white/[0.06] bg-[#121320]/60">
+                  <p className="text-[11px] text-zinc-400 mb-2 italic line-clamp-1 border-l-2 border-purple-500/50 pl-2">
+                    "{selectedText.slice(0, 40)}..."
+                  </p>
+                  <div className="flex gap-2">
+                    <Input
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Comment on selection..."
+                      className="flex-1 text-xs h-8 bg-black/40 border-white/10 text-white focus:ring-purple-500/40"
+                    />
+                    <Button
+                      size="icon"
+                      className="h-8 w-8 bg-purple-600 hover:bg-purple-500 text-white shrink-0"
+                      onClick={addComment}
+                      disabled={!newComment.trim()}
+                    >
+                      <Send className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
