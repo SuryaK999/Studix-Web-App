@@ -53,15 +53,20 @@ export function StudyRoomThemeProvider({ children, roomId }) {
   });
 
   // When roomId changes, reload the persisted room theme
-  useEffect(() => {
-    if (!roomId) return;
-    const stored = localStorage.getItem(`studix:theme:room:${roomId}`);
-    if (stored && ['light', 'dark', 'brand', 'amoled'].includes(stored)) {
-       setRoomThemeState(stored);
+  const [prevRoomId, setPrevRoomId] = useState(roomId);
+  if (roomId !== prevRoomId) {
+    setPrevRoomId(roomId);
+    if (typeof window !== 'undefined' && roomId) {
+      const stored = localStorage.getItem(`studix:theme:room:${roomId}`);
+      if (stored && ['light', 'dark', 'brand', 'amoled'].includes(stored)) {
+        setRoomThemeState(stored);
+      } else {
+        setRoomThemeState(null);
+      }
     } else {
-       setRoomThemeState(null);
+      setRoomThemeState(null);
     }
-  }, [roomId]);
+  }
 
   const setRoomTheme = (newTheme) => {
     setRoomThemeState(newTheme);
@@ -86,8 +91,5 @@ export function StudyRoomThemeProvider({ children, roomId }) {
 
 export function useStudyRoomTheme() {
   const context = useContext(StudyRoomThemeContext);
-  if (context === undefined) {
-    throw new Error('useStudyRoomTheme must be used within a StudyRoomThemeProvider');
-  }
-  return context;
+  return context || null;
 }
