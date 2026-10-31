@@ -13,6 +13,7 @@ import {
 import { StudixLogo } from '@/components/StudixLogo';
 import { Toaster, toast } from 'sonner';
 import { GlobalThemeProvider } from '@/hooks/useGlobalTheme';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { RadialMenu } from '@/components/ui/RadialMenu';
 import VoiceFloatingPanel from '@/components/voice/VoiceFloatingPanel';
 import ExploreDialog from '@/components/explore/ExploreDialog';
@@ -398,7 +399,7 @@ function App() {
         }
       }
 
-      el = el.parentElement || (el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null);
+      el = el.parentElement || (typeof ShadowRoot !== 'undefined' && el.getRootNode() instanceof ShadowRoot ? el.getRootNode().host : null);
     }
 
     return {
@@ -502,12 +503,14 @@ function App() {
   return (
     <AuthProvider>
       <GlobalThemeProvider>
+        <TooltipProvider delayDuration={200} skipDelayDuration={100}>
         <ExploreDialog />
         <VoiceFloatingPanel />
         <RadialMenu resolveItems={resolveRadialItems} onSelect={handleRadialAction}>
           <AppContent />
         </RadialMenu>
         <Toaster position="top-center" richColors />
+        </TooltipProvider>
       </GlobalThemeProvider>
     </AuthProvider>
   );
