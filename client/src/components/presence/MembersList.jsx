@@ -119,9 +119,13 @@ export function MembersList({ roomId }) {
       });
     };
 
+    let cancelled = false;
+
     const setupVoiceListeners = async () => {
       try {
-        socket = await socketService.connect();
+        const s = await socketService.connect();
+        if (cancelled) return;
+        socket = s;
         socket.on('voice:user-joined', handleUserJoined);
         socket.on('voice:existing-members', handleExistingMembers);
         socket.on('voice:user-left', handleUserLeft);
@@ -134,6 +138,7 @@ export function MembersList({ roomId }) {
     void setupVoiceListeners();
 
     return () => {
+      cancelled = true;
       if (socket) {
         socket.off('voice:user-joined', handleUserJoined);
         socket.off('voice:existing-members', handleExistingMembers);
