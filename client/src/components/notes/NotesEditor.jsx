@@ -350,7 +350,7 @@ export function NotesEditor({ roomId, roomName }) {
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
 
       {/* ── 1. Responsive & Polished Toolbar ── */}
-      <div className="flex items-center justify-between px-2.5 sm:px-4 md:px-6 py-2 border-b border-white/[0.06] bg-[#09090b]/90 backdrop-blur-xl shrink-0 z-20 gap-2 sm:gap-3 overflow-x-auto no-scrollbar scroll-smooth">
+      <div className="flex items-center justify-between px-2 sm:px-4 md:px-6 py-2 border-b border-white/[0.06] bg-[#09090b]/90 backdrop-blur-xl shrink-0 z-20 gap-2 sm:gap-3 overflow-x-auto scrollbar-none no-scrollbar [&::-webkit-scrollbar]:hidden">
         {/* Left Formatting Tools Group */}
         <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
           {/* Text Style Pill */}
@@ -558,7 +558,7 @@ export function NotesEditor({ roomId, roomName }) {
       {/* ── 2. Main Content Area ── */}
       <div className="flex flex-1 overflow-hidden relative">
         {/* Editor Canvas */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 relative scrollbar-hide notes-scroll-area">
+        <div className="flex-1 overflow-y-auto px-3 sm:px-6 md:px-10 lg:px-14 py-4 sm:py-6 md:py-8 relative custom-scrollbar notes-scroll-area">
           <div className="max-w-4xl mx-auto min-h-[500px]">
             <EditorContent editor={editor} className="tiptap-editor ProseMirror h-full focus:outline-none" />
           </div>
@@ -605,7 +605,7 @@ export function NotesEditor({ roomId, roomName }) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => setShowComments(false)}
-                className="fixed sm:hidden inset-0 bg-black/60 backdrop-blur-sm z-30"
+                className="absolute inset-0 bg-black/60 backdrop-blur-xs z-30"
               />
 
               <motion.div
@@ -613,7 +613,7 @@ export function NotesEditor({ roomId, roomName }) {
                 animate={{ x: 0, opacity: 1 }}
                 exit={{ x: '100%', opacity: 0 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 280 }}
-                className="absolute inset-y-0 right-0 z-40 w-full sm:w-80 md:w-96 border-l border-white/10 bg-[#0c0d14]/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col"
+                className="absolute inset-y-0 right-0 z-40 w-[88vw] sm:w-80 md:w-96 max-w-[400px] border-l border-white/10 bg-[#0c0d14]/95 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.8)] flex flex-col"
               >
                 <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/[0.06] bg-white/[0.02]">
                   <div className="flex items-center gap-2">
