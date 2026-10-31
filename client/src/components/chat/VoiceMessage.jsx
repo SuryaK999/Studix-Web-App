@@ -14,22 +14,31 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
 
   // Normalize relative paths to absolute using API URL
   const getFullUrl = (url) => {
-    if (url.startsWith('http')) return url;
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http') || url.startsWith('blob:')) return url;
     const baseUrl = getServerUrl();
     return `${baseUrl.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
   const fullAudioUrl = getFullUrl(audioUrl);
 
-
   useEffect(() => {
+    if (!fullAudioUrl) return;
+    let cancelled = false;
+
     // Quick load check trick for Chrome caching WebM duration
     const testAudio = new Audio();
     testAudio.src = fullAudioUrl;
     testAudio.onloadedmetadata = () => {
-      if (testAudio.duration !== Infinity && !isNaN(testAudio.duration)) {
+      if (!cancelled && testAudio.duration !== Infinity && !isNaN(testAudio.duration)) {
         setDuration(testAudio.duration);
       }
+    };
+
+    return () => {
+      cancelled = true;
+      testAudio.src = '';
+      testAudio.onloadedmetadata = null;
     };
   }, [fullAudioUrl]);
 
