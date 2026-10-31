@@ -12,15 +12,15 @@ export function getNetworkUrl(envUrl) {
       try {
         const urlObj = new URL(envUrl);
         if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
-          urlObj.hostname = hostname;
+          return window.location.origin;
         }
         return urlObj.toString().replace(/\/$/, '');
       } catch {
-        return envUrl.replace(/\/$/, '');
+        return window.location.origin;
       }
     }
   }
-  return envUrl.replace(/\/$/, '');
+  return (envUrl || 'http://localhost:4000').replace(/\/$/, '');
 }
 
 export function getServerUrl() {

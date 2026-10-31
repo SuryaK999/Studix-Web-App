@@ -4,6 +4,8 @@ const { createServer } = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
+const path = require('path');
+const fs = require('fs');
 
 const { connectDB, getMongoDBStatus } = require('./config/database');
 const { connectRedis, isRedisReady, getPubClient, getSubClient } = require('./config/redis');
@@ -27,7 +29,7 @@ app.use(cors({
   },
   credentials: true,
 }));
-const path = require('path');
+
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -59,6 +61,18 @@ app.use('/api/notes',    notesRouter);
 app.use('/api/rooms',    roomsRouter);
 app.use('/api/users',    usersRouter);
 
+// Serve frontend React SPA if client build exists (unified fullstack deployment)
+const clientDistPath = path.resolve(__dirname, '../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+}
+
 app.use((_req, res) => res.status(404).json({ error: 'Not found' }));
 
 const httpServer = createServer(app);
@@ -74,7 +88,6 @@ const io = new Server(httpServer, {
   pingInterval:        25000,
   maxHttpBufferSize:   1e6, 
   connectionStateRecovery: {
-    
     maxDisconnectionDuration: 2 * 60 * 1000,
     skipMiddlewares: false,
   },
