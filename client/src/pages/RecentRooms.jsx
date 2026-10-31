@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { getRecentRooms } from '@/utils/recentRooms';
 import { useNavigate } from 'react-router-dom';
 import { Clock, Users, ArrowRight } from 'lucide-react';
