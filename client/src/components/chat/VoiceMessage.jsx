@@ -6,7 +6,12 @@ import { cn, getServerUrl } from '@/lib/utils';
 export function VoiceMessage({ audioUrl, duration: initialDuration }) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(initialDuration || 0);
+  const [loadedDuration, setLoadedDuration] = useState(0);
+
+  const parsedInitial = Number(initialDuration);
+  const validInitial = !isNaN(parsedInitial) && parsedInitial > 0 ? parsedInitial : 0;
+  const duration = loadedDuration > 0 ? loadedDuration : validInitial;
+
   const [isReady, setIsReady] = useState(false);
   const [isError, setIsError] = useState(false);
   
@@ -15,7 +20,7 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
   // Normalize relative paths to absolute using API URL
   const getFullUrl = (url) => {
     if (!url || typeof url !== 'string') return '';
-    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) return url;
     const baseUrl = getServerUrl();
     return `${baseUrl.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
   };
@@ -30,8 +35,8 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
     const testAudio = new Audio();
     testAudio.src = fullAudioUrl;
     testAudio.onloadedmetadata = () => {
-      if (!cancelled && testAudio.duration !== Infinity && !isNaN(testAudio.duration)) {
-        setDuration(testAudio.duration);
+      if (!cancelled && testAudio.duration !== Infinity && !isNaN(testAudio.duration) && testAudio.duration > 0) {
+        setLoadedDuration(testAudio.duration);
       }
     };
 
@@ -63,8 +68,8 @@ export function VoiceMessage({ audioUrl, duration: initialDuration }) {
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      if (audioRef.current.duration !== Infinity && !isNaN(audioRef.current.duration)) {
-         setDuration(audioRef.current.duration);
+      if (audioRef.current.duration !== Infinity && !isNaN(audioRef.current.duration) && audioRef.current.duration > 0) {
+        setLoadedDuration(audioRef.current.duration);
       }
       setIsReady(true);
       setIsError(false);
