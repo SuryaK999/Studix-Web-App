@@ -64,7 +64,7 @@ export function NotesEditor({ roomId, roomName }) {
         
         currentEditor.commands.setContent(patchQueueRef.current, false);
         
-        try { currentEditor.commands.setTextSelection({ from, to }); } catch (e) {}
+        try { currentEditor.commands.setTextSelection({ from, to }); } catch {}
         
         // Restore scroll gracefully
         requestAnimationFrame(() => {
@@ -138,7 +138,7 @@ export function NotesEditor({ roomId, roomName }) {
 
         editor.commands.setContent(content, false);
         
-        try { editor.commands.setTextSelection({ from, to }); } catch (_) {}
+        try { editor.commands.setTextSelection({ from, to }); } catch {}
         
         requestAnimationFrame(() => {
           if (scrollContainer) scrollContainer.scrollTop = scrollPos;
@@ -193,7 +193,7 @@ export function NotesEditor({ roomId, roomName }) {
   }, []);
 
   // ─── PDF Export Logic ──────────────────────────────────────────────────
-  const exportToPDF = async () => {
+  const exportToPDF = useCallback(async () => {
     if (!editor || isExporting.current) return;
     try {
       isExporting.current = true;
@@ -262,7 +262,7 @@ export function NotesEditor({ roomId, roomName }) {
       // Restore focus to editor without causing page shifting glitches
       requestAnimationFrame(() => editor?.commands.focus());
     }
-  };
+  }, [editor, roomName]);
 
   // ─── Listen for Radial Menu Actions ───────────────────────────
   useEffect(() => {
