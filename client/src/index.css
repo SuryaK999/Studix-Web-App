@@ -159,25 +159,68 @@
   }
 }
 
-/* ─── Custom scrollbar (Invisible Professional) ──────────────────────────── */
+/* ─── Custom scrollbar (Sleek Minimalist Modern) ─────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(120, 120, 160, 0.25) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
 }
 *::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 *::-webkit-scrollbar-track {
   background: transparent;
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 160, 0.25);
-  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 160, 0.45);
+  background: rgba(168, 85, 247, 0.35);
 }
+*::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* ─── Utility classes to completely eliminate scrollbars when desired ───── */
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.35);
+}
+.custom-scrollbar::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 html {
   scroll-behavior: auto;
 }
@@ -511,7 +554,7 @@ textarea:focus-visible {
 /* Studix TipTap Collaborative Notes */
 .tiptap-editor.ProseMirror {
   color: #e4e4e7;
-  font-size: 15px;
+  font-size: clamp(14px, 1.1vw + 12px, 15.5px);
   line-height: 1.75;
 }
 
@@ -520,21 +563,21 @@ textarea:focus-visible {
 }
 
 .tiptap-editor.ProseMirror h1 {
-  font-size: 1.85rem;
+  font-size: clamp(1.4rem, 2vw + 1rem, 1.85rem);
   font-weight: 800;
   color: #ffffff;
   letter-spacing: -0.02em;
-  margin-top: 1.5rem;
-  margin-bottom: 0.75rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0.65rem;
 }
 
 .tiptap-editor.ProseMirror h2 {
-  font-size: 1.45rem;
+  font-size: clamp(1.2rem, 1.5vw + 0.85rem, 1.45rem);
   font-weight: 700;
   color: #f4f4f5;
   letter-spacing: -0.015em;
-  margin-top: 1.25rem;
-  margin-bottom: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 0.45rem;
 }
 
 .tiptap-editor.ProseMirror h3 {
