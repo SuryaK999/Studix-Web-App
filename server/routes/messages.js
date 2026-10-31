@@ -73,6 +73,14 @@ router.delete('/:roomId/:messageId', expressAuthMiddleware, async (req, res) => 
       }
 
       await Message.deleteOne({ _id: msg._id });
+      const io = req.app.get('io');
+      if (io) {
+        io.to(roomId).emit('chat:message_deleted', {
+          messageId,
+          realId: msg._id.toString(),
+          tempId: msg.tempId
+        });
+      }
     }
 
     res.json({ success: true, messageId });
