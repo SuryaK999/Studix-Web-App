@@ -289,7 +289,7 @@ export function ChatPanel({ roomId, roomData, className }) {
   }, [messages]);
 
   return (
-    <div className={cn('flex flex-col h-full bg-[#09090b] relative overflow-hidden', className)}>
+    <div className={cn('flex flex-col h-full w-full min-w-0 bg-[#09090b] relative overflow-hidden', className)}>
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,_#1e1b4b_0%,_transparent_60%)] opacity-80" />
 
       {/* Room Header */}
@@ -351,9 +351,9 @@ export function ChatPanel({ roomId, roomData, className }) {
       </header>
 
       {/* Message List Area */}
-      <div className="flex-1 relative overflow-hidden group/list min-h-0 z-10" data-radial-context="chat">
+      <div className="flex-1 relative overflow-hidden group/list min-h-0 w-full min-w-0 z-10" data-radial-context="chat">
         <ScrollArea className="h-full w-full" ref={scrollRef}>
-          <div className="px-5 py-8 max-w-5xl mx-auto min-h-full flex flex-col justify-end space-y-1">
+          <div className="px-3 sm:px-5 pt-4 sm:pt-6 pb-20 sm:pb-24 max-w-5xl mx-auto min-h-full flex flex-col justify-end space-y-1.5 w-full min-w-0">
             {hasMoreMessages && messages.length >= PAGE_SIZE && (
               <div className="flex justify-center mb-8">
                 <Button
@@ -406,14 +406,15 @@ export function ChatPanel({ roomId, roomData, className }) {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 10 }}
               onClick={() => scrollToBottom('smooth')}
-              className="absolute bottom-6 right-8 p-3 rounded-full bg-indigo-600 text-white shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-indigo-500/60 hover:bg-indigo-500 transition-all z-40 group border border-white/10"
+              className="absolute bottom-5 right-5 sm:bottom-6 sm:right-7 p-2.5 sm:p-3 rounded-full bg-indigo-600/90 hover:bg-indigo-600 text-white shadow-[0_8px_30px_rgba(79,70,229,0.4)] hover:shadow-indigo-500/60 backdrop-blur-md transition-all z-40 group border border-white/20 active:scale-95"
+              aria-label="Scroll to newest messages"
             >
               <div className="relative">
-                <ChevronUp className="h-5 w-5 rotate-180" />
-                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-indigo-600 animate-pulse" />
+                <ChevronUp className="h-4 w-4 sm:h-5 sm:w-5 rotate-180" />
+                <div className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-indigo-600 animate-pulse" />
               </div>
-              <span className="absolute right-full mr-4 px-3 py-1.5 rounded-xl bg-[#0E0F14] text-[11px] font-bold uppercase tracking-wider text-white opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100 whitespace-nowrap shadow-2xl border border-white/10 origin-right">
-                New Messages &darr;
+              <span className="absolute right-full mr-3 px-2.5 py-1 rounded-lg bg-[#0E0F14]/95 backdrop-blur-md text-[10.5px] font-semibold text-white opacity-0 group-hover:opacity-100 transition-all scale-95 group-hover:scale-100 whitespace-nowrap shadow-xl border border-white/10 origin-right pointer-events-none">
+                Scroll to bottom &darr;
               </span>
             </motion.button>
           )}
