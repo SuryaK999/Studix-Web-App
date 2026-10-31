@@ -159,16 +159,16 @@ export function sanitizeAiInput(input) {
  */
 export function buildSmartFallbackSummary(textMessages = [], roomName = 'Study Room') {
   if (!textMessages || textMessages.length === 0) {
-    return `## 📌 Summary
+    return `### Summary
 No messages have been recorded in **${roomName}** yet. As soon as you and your peers start chatting, you can generate a quick summary here!
 
-## 💡 Key Discussion Points
+### Key Discussion Points
 - Waiting for the first discussion topics or questions.
 
-## 📋 Action Items
+### Action Items
 *No pending action items or tasks.*
 
-## 🎯 Next Study Focus
+### Next Study Focus
 Start by sharing what you're working on today or ask a question to kick off the session!`;
   }
 
@@ -198,14 +198,14 @@ Start by sharing what you're working on today or ask a question to kick off the 
   const isBriefChat = textMessages.length <= 10;
   const participantStr = participants.length > 0 ? participants.join(', ') : 'Study group';
 
-  let out = `## 📌 Summary\n`;
+  let out = `### Summary\n`;
   if (isBriefChat) {
     out += `The group recently opened discussion in **${roomName}** with **${participantStr}**. Across ${textMessages.length} brief exchange${textMessages.length === 1 ? '' : 's'}, members connected and initiated conversation.\n\n`;
   } else {
     out += `Active study session in **${roomName}** with **${participantStr}** (${textMessages.length} messages analyzed). The team collaborated on shared learning objectives and problem solving.\n\n`;
   }
 
-  out += `## 💡 Key Discussion Points\n`;
+  out += `### Key Discussion Points\n`;
   if (questions.length > 0) {
     questions.forEach(q => {
       out += `- **Question raised by ${q.senderName || 'peer'}**: *"${q.text.slice(0, 120)}"${q.text.length > 120 ? '...' : ''}*\n`;
@@ -218,7 +218,7 @@ Start by sharing what you're working on today or ask a question to kick off the 
   }
   out += `\n`;
 
-  out += `## 📋 Action Items\n`;
+  out += `### Action Items\n`;
   if (detectedTasks.length > 0) {
     detectedTasks.forEach((t, i) => {
       out += `${i + 1}. ${t.text.trim()} *(mentioned by ${t.senderName || 'Team'})*\n`;
@@ -228,7 +228,7 @@ Start by sharing what you're working on today or ask a question to kick off the 
   }
   out += `\n`;
 
-  out += `## 🎯 Next Study Focus\n`;
+  out += `### Next Study Focus\n`;
   out += `Continue building understanding in **${roomName}**. Feel free to tag \`@ai\` in the chat if you need an explanation, code review, or practice quiz on any topic!`;
 
   return out;
@@ -276,20 +276,20 @@ STRICT HUMANIZER & FACTUALITY RULES:
 3. STRUCTURED OUTPUT FORMAT:
 You MUST format your output strictly in valid Markdown using these 4 section headers:
 
-## 📌 Summary
+### Summary
 A concise 2-3 sentence overview of what actually happened, who participated, and what the conversation focused on.
 
-## 💡 Key Discussion Points
+### Key Discussion Points
 - 2-4 bullet points (- ) capturing genuine topics, questions asked, answers given, or shared resources.
 - If the chat was very brief (just greetings or short talk), 1-2 concise bullets are sufficient.
 
-## 📋 Action Items
+### Action Items
 - List concrete tasks or promises that participants EXPLICITLY agreed to do (e.g., "1. Finish exercise 3 - *Owner: Surya*").
 - If NO tasks or commitments were made in the conversation, you MUST write:
   *No pending action items or tasks were assigned in this discussion.*
   (NEVER fabricate tasks!).
 
-## 🎯 Next Study Focus
+### Next Study Focus
 One helpful, encouraging study tip or concept suggestion directly relevant to the subject of "${roomName}".`;
 
       const aiSummary = await executeGroqChatCompletion({
@@ -354,7 +354,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // Fallback handler for greetings (NEVER output tables or formal definition breakdowns for hi)
   if (isGreeting) {
-    return `### 👋 Hey there!\n\n` +
+    return `### Welcome to StudyBuddy\n\n` +
       `I'm **StudyBuddy AI**, your real-time academic companion on Studix.\n\n` +
       `What are we studying or working on today? Here's how I can help:\n` +
       `- **Explain concepts** with clear real-world analogies (\`@ai explain <topic>\`)\n` +
@@ -381,7 +381,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
       .trim();
 
     if (!topic || /^(hi+|hello+|hey+|yo+|sup)\b/i.test(topic) || topic.length <= 3) {
-      return `### 👋 Ready to Study!\n\n` +
+      return `### Ready to Study\n\n` +
         `Tell me what topic or concept you'd like to explore today! For example:\n` +
         `- \`@ai explain async/await in JavaScript\`\n` +
         `- \`@ai explain binary search trees\`\n` +
@@ -389,7 +389,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
         `I'll break it down with clear explanations and examples! 💡`;
     }
 
-    return `### 💡 Concept Overview: ${topic}\n\n` +
+    return `### Concept Overview: ${topic}\n\n` +
       `Here is a clear, step-by-step breakdown:\n\n` +
       `1. **Core Idea:** **${topic}** is best understood through its fundamental purpose and practical application.\n` +
       `2. **Real-world Analogy:** Think of it like a coordinated system where each component has a single, well-defined responsibility.\n` +
@@ -400,7 +400,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // 3. Comparison & Differences
   if (lower.includes(' vs ') || lower.includes('difference between') || lower.includes('compare')) {
-    return `### ⚖️ Comparison & Key Differences\n\n` +
+    return `### Comparison & Key Differences\n\n` +
       `| Dimension | Option A | Option B |\n` +
       `|---|---|---|\n` +
       `| **Primary Purpose** | Specialized for specific workflows | General-purpose, flexible usage |\n` +
@@ -411,7 +411,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // 4. Quiz / Knowledge Check
   if (lower.includes('quiz') || lower.includes('test me') || lower.includes('practice question')) {
-    return `### 📝 Quick Knowledge Check\n\n` +
+    return `### Quick Knowledge Check\n\n` +
       `Test your understanding with these practice questions:\n\n` +
       `**1.** What is the primary difference between synchronous and asynchronous operations?\n` +
       `**2.** Why is time complexity (Big-O) crucial when scaling algorithms?\n` +
@@ -421,7 +421,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // 5. Code / Debugging Help
   if (lower.includes('code') || lower.includes('debug') || lower.includes('error') || lower.includes('bug') || lower.includes('syntax')) {
-    return `### 💻 Code & Debugging Assistant\n\n` +
+    return `### Code & Debugging Assistant\n\n` +
       `Here is how to isolate and fix this issue:\n\n` +
       `1. **Identify the exact error line:** Check your stack trace and console output.\n` +
       `2. **Validate your data types:** Ensure values aren't \`undefined\` or \`null\` prior to access.\n` +
@@ -438,7 +438,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
 
   // 6. Simplify / ELI5
   if (lower.includes('simplif') || lower.includes('eli5') || lower.includes('simple terms')) {
-    return `### 🧒 In Super Simple Terms\n\n` +
+    return `### Simplified Explanation\n\n` +
       `Imagine you're organizing items with labeled boxes 📦:\n` +
       `- Each box has a specific purpose.\n` +
       `- You only open the box when you need what's inside.\n` +
@@ -447,7 +447,7 @@ export async function generateAiStudyResponse(userInput, recentMessages = [], op
   }
 
   // Default responsive tutor
-  return `### 🤖 StudyBuddy AI\n\n` +
+  return `### StudyBuddy AI\n\n` +
     `Great study topic: **${rawPrompt || 'your current lesson'}**!\n\n` +
     `- **Direct Answer:** Let's break this down clearly for your study group.\n` +
     `- **Tip:** You can ask me to \`@ai explain <topic>\`, \`@ai code <problem>\`, or \`@ai quiz me\` anytime directly in this chat!\n` +
