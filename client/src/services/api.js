@@ -1,58 +1,67 @@
-
 import { auth } from '@/lib/firebase/config';
 import { getServerUrl } from '@/lib/utils';
 
 const API_URL = getServerUrl();
+const DEFAULT_TIMEOUT_MS = 15_000;
 
-async function get(path) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (auth.currentUser) {
-    const token = await auth.currentUser.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
+export class ApiError extends Error {
+  constructor(message, status, data) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.data = data;
   }
-
-  const res = await fetch(`${API_URL}${path}`, { headers });
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${await res.text()}`);
-  }
-  return res.json();
 }
 
-async function post(path, body) {
-  const headers = { 'Content-Type': 'application/json' };
+async function request(path, options = {}) {
+  const { method = 'GET', body, timeout = DEFAULT_TIMEOUT_MS, headers = {}, signal } = options;
+
+  const reqHeaders = { 'Content-Type': 'application/json', ...headers };
   if (auth.currentUser) {
-    const token = await auth.currentUser.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const token = await auth.currentUser.getIdToken();
+      if (token) reqHeaders['Authorization'] = `Bearer ${token}`;
+    } catch {
+      // Proceed without token if refresh fails
+    }
   }
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${await res.text()}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort(), { once: true });
   }
-  return res.json();
+
+  try {
+    const res = await fetch(`${API_URL}${path}`, {
+      method,
+      headers: reqHeaders,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(text);
+      } catch {
+        errorData = text;
+      }
+      throw new ApiError(errorData?.error ?? `API error ${res.status}: ${res.statusText}`, res.status, errorData);
+    }
+
+    return await res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
-async function put(path, body) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (auth.currentUser) {
-    const token = await auth.currentUser.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'PUT',
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    throw new Error(`API error ${res.status}: ${await res.text()}`);
-  }
-  return res.json();
-}
+export const get = (path, options) => request(path, { method: 'GET', ...options });
+export const post = (path, body, options) => request(path, { method: 'POST', body, ...options });
+export const put = (path, body, options) => request(path, { method: 'PUT', body, ...options });
+export const del = (path, options) => request(path, { method: 'DELETE', ...options });
 
 export async function fetchUserProfile() {
   return get('/api/users/profile');
@@ -104,17 +113,5 @@ export async function leaveRoom(roomId) {
 }
 
 export async function deleteMessageApi(roomId, messageId) {
-  const headers = { 'Content-Type': 'application/json' };
-  if (auth.currentUser) {
-    const token = await auth.currentUser.getIdToken();
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  const res = await fetch(`${API_URL}/api/messages/${encodeURIComponent(roomId)}/${encodeURIComponent(messageId)}`, {
-    method: 'DELETE',
-    headers,
-  });
-  if (!res.ok) {
-    throw new Error(`API delete error ${res.status}: ${await res.text()}`);
-  }
-  return res.json();
+  return del(`/api/messages/${encodeURIComponent(roomId)}/${encodeURIComponent(messageId)}`);
 }
