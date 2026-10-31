@@ -1153,11 +1153,11 @@ export function AiStudyBuddy({ roomId }) {
               </div>
             ) : (
               /* Message Stream */
-              <div className="space-y-7 py-2">
+              <div className="space-y-6 sm:space-y-7 py-2 min-w-0 w-full">
                 {messages.map((message, index) => (
-                  <div key={message.id || `msg-${index}`} className="w-full">
+                  <div key={message.id || `msg-${index}`} className="w-full min-w-0">
                     {message.role === 'assistant' ? (
-                      <div className="flex gap-2.5 sm:gap-3.5 md:gap-4 items-start w-full group">
+                      <div className="flex gap-2.5 sm:gap-3.5 md:gap-4 items-start w-full min-w-0 group">
                         <StudyBuddyAvatar size="md" shape="circle" className="w-7 h-7 sm:w-8 sm:h-8 mt-0.5" />
 
                         <div className="flex-1 min-w-0">
@@ -1171,7 +1171,7 @@ export function AiStudyBuddy({ roomId }) {
                             </div>
                           )}
 
-                          <div className="text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words [overflow-wrap:anywhere] overflow-hidden">
+                          <div className="text-zinc-200 text-[13.5px] sm:text-[14px] leading-relaxed break-words [overflow-wrap:anywhere] min-w-0 max-w-full w-full">
                             <MarkdownRenderer content={message.content || message.text || ''} />
                           </div>
 
@@ -1243,8 +1243,8 @@ export function AiStudyBuddy({ roomId }) {
                       </div>
                     ) : (
                       /* User Message: Clean modern pill */
-                      <div className="flex gap-2 sm:gap-2.5 justify-end items-start w-full">
-                        <div className="bg-[#27272a] hover:bg-[#2c2c31] text-zinc-100 rounded-2xl sm:rounded-3xl px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm max-w-[90%] sm:max-w-[80%] md:max-w-[75%] border border-white/5 transition-colors">
+                      <div className="flex gap-2 sm:gap-2.5 justify-end items-start w-full min-w-0">
+                        <div className="bg-[#27272a] hover:bg-[#2c2c31] text-zinc-100 rounded-2xl sm:rounded-3xl px-3.5 py-2 sm:px-4 sm:py-2.5 shadow-sm max-w-[90%] sm:max-w-[80%] md:max-w-[75%] border border-white/5 transition-colors min-w-0">
                           <p className="text-[13.5px] sm:text-[14px] leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
                             {message.content}
                           </p>
