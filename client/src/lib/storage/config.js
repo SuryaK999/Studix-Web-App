@@ -41,8 +41,20 @@ export const SUPABASE_CONFIG = {
 // STORAGE SETTINGS
 // ============================================
 export const STORAGE_SETTINGS = {
-  maxFileSize: 10 * 1024 * 1024, // 10MB
+  maxFileSize: 25 * 1024 * 1024, // 25MB
   allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  allowedAudioTypes: [
+    'audio/webm',
+    'audio/webm;codecs=opus',
+    'audio/mp4',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/ogg',
+    'audio/ogg;codecs=opus',
+    'audio/wav',
+    'audio/mpeg',
+    'audio/aac',
+    'audio/x-m4a',
+  ],
   allowedFileTypes: [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
@@ -50,6 +62,16 @@ export const STORAGE_SETTINGS = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/plain',
     'application/zip',
+    'audio/webm',
+    'audio/webm;codecs=opus',
+    'audio/mp4',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/ogg',
+    'audio/ogg;codecs=opus',
+    'audio/wav',
+    'audio/mpeg',
+    'audio/aac',
+    'audio/x-m4a',
   ],
   imageCompression: {
     maxWidthOrHeight: 1920,
