@@ -86,8 +86,8 @@ export const MessageItem = memo(function MessageItem({
   }, []);
 
   const getFullUrl = (url) => {
-    if (!url) return '';
-    if (url.startsWith('http') || url.startsWith('blob:')) return url;
+    if (!url || typeof url !== 'string') return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) return url;
     const baseUrl = getServerUrl();
     return `${baseUrl.replace(/\/$/, '')}${url.startsWith('/') ? '' : '/'}${url}`;
   };
@@ -249,7 +249,11 @@ export const MessageItem = memo(function MessageItem({
     if (message.type === 'voice' && audioSrc) {
       return (
         <div className="space-y-2">
-          <VoiceMessage key={audioSrc} audioUrl={audioSrc} duration={message.voice?.duration || message.fileDuration} />
+          <VoiceMessage
+            key={audioSrc}
+            audioUrl={audioSrc}
+            duration={message.voiceDuration || message.voice?.duration || message.fileDuration || 0}
+          />
           {message.text && message.text !== 'Voice message' && <p className="text-sm pr-12">{message.text}</p>}
         </div>
       );
