@@ -61,15 +61,15 @@ app.use('/api/notes',    notesRouter);
 app.use('/api/rooms',    roomsRouter);
 app.use('/api/users',    usersRouter);
 
-// Serve frontend React SPA if client build exists (unified fullstack deployment)
+// Serve frontend React SPA if client build exists (compatible with Express 5)
 const clientDistPath = path.resolve(__dirname, '../client/dist');
 if (fs.existsSync(clientDistPath)) {
   app.use(express.static(clientDistPath));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
-      return next();
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health') && !req.path.startsWith('/socket.io')) {
+      return res.sendFile(path.join(clientDistPath, 'index.html'));
     }
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+    next();
   });
 }
 
