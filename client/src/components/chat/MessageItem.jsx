@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Copy, Edit2, Trash2, Reply, SmilePlus,
   Bot, Clock, CheckCircle2, AlertCircle, FileText, Download, Play, Pause, ExternalLink,
-  MessageSquare, Sparkles
+  MessageSquare, Sparkles, Image as ImageIcon, X, Check
 } from 'lucide-react';
 import { cn, getServerUrl } from '@/lib/utils';
 
