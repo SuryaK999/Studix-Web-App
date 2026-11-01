@@ -3,7 +3,7 @@
 <br/>
 
 <a href="https://github.com/SuryaK999/Studix-Web-App">
-  <img src="app/public/studix-logo.svg" alt="Studix Logo" width="110" height="110" style="filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.45));" />
+  <img src="client/public/studix-logo.svg" alt="Studix Logo" width="110" height="110" style="filter: drop-shadow(0 0 25px rgba(99, 102, 241, 0.45));" />
 </a>
 
 # 🎓 Studix
